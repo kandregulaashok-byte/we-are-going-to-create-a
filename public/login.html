@@ -87,13 +87,25 @@
         const user = data.user;
         
         // Fetch user role from profiles
-        const { data: profile, error: profileError } = await supabaseClient
+        const { data: profile } = await supabaseClient
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
 
         let resolvedRole = profile?.role;
+        
+        if (!resolvedRole) {
+          const { data: ownerRecord } = await supabaseClient
+            .from("hotel_owners")
+            .select("id")
+            .eq("id", user.id)
+            .single();
+          if (ownerRecord) {
+            resolvedRole = "owner";
+          }
+        }
+
         // ponytail: fallback check if profile role is not populated but email matches default admin
         if (!resolvedRole && email === "admin@staymaredumilli.com") {
           resolvedRole = "admin";
