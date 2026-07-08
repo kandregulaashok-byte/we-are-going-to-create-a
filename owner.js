@@ -782,9 +782,21 @@ function setupCustomBlockerBtn() {
         `).join("");
       }
       
-      // Default custom date to today
+      // Default custom date to today, allowing selectable range from today to 3 months later
       if (modalCustomDate) {
-        modalCustomDate.value = new Date().toISOString().split("T")[0];
+        const d = new Date();
+        const offset = d.getTimezoneOffset();
+        const localToday = new Date(d.getTime() - (offset * 60 * 1000));
+        const todayStr = localToday.toISOString().split("T")[0];
+        
+        const threeMonthsLater = new Date();
+        threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+        const localMax = new Date(threeMonthsLater.getTime() - (offset * 60 * 1000));
+        const maxStr = localMax.toISOString().split("T")[0];
+        
+        modalCustomDate.value = todayStr;
+        modalCustomDate.min = todayStr;
+        modalCustomDate.max = maxStr;
       }
       
       // Reset steppers
