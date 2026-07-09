@@ -192,4 +192,5 @@ Central variables defined in `styles.css` create a cohesive dark mode aesthetic:
 - **Responsive Layout Breakpoints:** 
   - Media queries stack columns on mobile screens (`max-width: 640px`).
   - `.topbar` utilizes `justify-content: space-between` and `flex-wrap: wrap` to prevent element overlaps on narrower viewports.
+  - `.admin-section-select` is styled as a responsive dropdown dashboard selector to consolidate and switch all Super Admin panels cleanly on all screen sizes.
   - `.sales-item` and `.influencer-item` automatically transform from flex-row items to vertical grids on mobile.
