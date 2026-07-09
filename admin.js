@@ -137,7 +137,7 @@ adminRoomForm.addEventListener("submit", async event => {
     weekday_owner_price: Number(adminWeekdayOwnerPrice.value),
     weekend_price: Number(document.querySelector("#adminWeekendPrice").value),
     weekend_owner_price: Number(adminWeekendOwnerPrice.value),
-    owner_id: adminRoomOwner ? adminRoomOwner.value : null,
+    owner_id: adminRoomOwner && adminRoomOwner.value ? adminRoomOwner.value : null,
     amenities,
     special_attention: document.querySelector("#adminSpecialAttention").value,
     image_urls: imageUrls
@@ -236,11 +236,14 @@ function renderImageOrderList() {
     </div>
   `).join("");
   
+  const updateOrderVal = (e) => {
+    const idx = parseInt(e.target.dataset.index, 10);
+    currentRoomImages[idx].order = e.target.value ? parseInt(e.target.value, 10) : null;
+  };
   list.querySelectorAll(".image-order-input").forEach(input => {
-    input.addEventListener("input", (e) => {
-      const idx = parseInt(e.target.dataset.index, 10);
-      currentRoomImages[idx].order = e.target.value ? parseInt(e.target.value, 10) : null;
-    });
+    input.addEventListener("input", updateOrderVal);
+    input.addEventListener("change", updateOrderVal);
+    input.addEventListener("keyup", updateOrderVal);
   });
   
   list.querySelectorAll(".remove-img-btn").forEach(btn => {
@@ -254,9 +257,10 @@ function renderImageOrderList() {
 
 document.querySelector("#adminImages")?.addEventListener("change", (e) => {
   const files = Array.from(e.target.files);
+  const startOrder = editingRoomId ? currentRoomImages.length : 0;
   const newImages = files.map((file, index) => {
     const url = URL.createObjectURL(file);
-    return { file, url, order: index + 1 };
+    return { file, url, order: startOrder + index + 1 };
   });
   
   if (editingRoomId) {
