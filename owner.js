@@ -66,6 +66,7 @@ const modalRoomSelectRow = document.querySelector("#modalRoomSelectRow");
 const modalRoomSelect = document.querySelector("#modalRoomSelect");
 const modalDateSelectRow = document.querySelector("#modalDateSelectRow");
 const modalCustomDate = document.querySelector("#modalCustomDate");
+const customCalendarWrapper = document.querySelector("#customCalendarWrapper");
 
 const supabaseConfig = window.STAY_SUPABASE || {};
 const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.supabase
@@ -788,22 +789,13 @@ function setupCustomBlockerBtn() {
         `).join("");
       }
       
-      // Default custom date to today, allowing selectable range from today to 3 months later
+      // Default custom date to today
       if (modalCustomDate) {
-        const d = new Date();
-        const offset = d.getTimezoneOffset();
-        const localToday = new Date(d.getTime() - (offset * 60 * 1000));
-        const todayStr = localToday.toISOString().split("T")[0];
-        
-        const threeMonthsLater = new Date();
-        threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
-        const localMax = new Date(threeMonthsLater.getTime() - (offset * 60 * 1000));
-        const maxStr = localMax.toISOString().split("T")[0];
-        
-        modalCustomDate.value = todayStr;
-        modalCustomDate.min = todayStr;
-        modalCustomDate.max = maxStr;
+        modalCustomDate.value = getLocalDateString();
       }
+      
+      // Render the custom 3-month calendar selection list
+      renderCustom3MonthCalendar();
       
       // Reset steppers
       nightsCount = 1;
@@ -821,6 +813,80 @@ function setupCustomBlockerBtn() {
       quickBookingModal.classList.remove("hidden");
     });
   }
+}
+
+// Generate next 3 months list of calendars
+function renderCustom3MonthCalendar() {
+  if (!customCalendarWrapper) return;
+  
+  const todayStr = getLocalDateString();
+  
+  const threeMonthsLater = new Date();
+  threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+  const maxStr = getLocalDateString(threeMonthsLater);
+  
+  const selectedDateStr = modalCustomDate.value || todayStr;
+  
+  let html = "";
+  const daysOfWeek = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  
+  for (let m = 0; m < 3; m++) {
+    const targetMonthDate = new Date();
+    targetMonthDate.setDate(1); // Set to first day to avoid month overflow
+    targetMonthDate.setMonth(targetMonthDate.getMonth() + m);
+    
+    const year = targetMonthDate.getFullYear();
+    const month = targetMonthDate.getMonth();
+    const monthName = targetMonthDate.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    
+    // First day of this month
+    const firstDay = new Date(year, month, 1);
+    let startOffset = firstDay.getDay() - 1;
+    if (startOffset < 0) startOffset = 6; // Sunday
+    
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    
+    html += `
+      <div class="custom-calendar-month">
+        <div class="custom-calendar-month-title">${monthName}</div>
+        <div class="custom-calendar-grid">
+          ${daysOfWeek.map(h => `<div class="custom-calendar-day-header">${h}</div>`).join("")}
+          ${Array(startOffset).fill("").map(() => `<div></div>`).join("")}
+          ${Array(totalDays).fill(0).map((_, i) => {
+            const dayNum = i + 1;
+            const mStr = String(month + 1).padStart(2, '0');
+            const dStr = String(dayNum).padStart(2, '0');
+            const dayDateStr = `${year}-${mStr}-${dStr}`;
+            
+            const disabled = (dayDateStr < todayStr) || (dayDateStr > maxStr);
+            const isSelected = dayDateStr === selectedDateStr;
+            
+            return `
+              <button 
+                type="button" 
+                class="custom-calendar-day ${isSelected ? "selected" : ""}" 
+                data-date="${dayDateStr}"
+                ${disabled ? "disabled" : ""}
+              >
+                ${dayNum}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+  
+  customCalendarWrapper.innerHTML = html;
+  
+  // Attach click listeners to selectable day buttons
+  customCalendarWrapper.querySelectorAll(".custom-calendar-day:not(:disabled)").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const selectedDate = e.currentTarget.dataset.date;
+      modalCustomDate.value = selectedDate;
+      renderCustom3MonthCalendar(); // Re-render to update highlghts
+    });
+  });
 }
 
 function setupRealtime() {
