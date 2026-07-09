@@ -1,0 +1,165 @@
+================================================================================
+STAY@MAREDUMILLI - PORTABLE DEVELOPMENT CONTEXT & HAND-OFF SPECIFICATION
+================================================================================
+This single text file contains all configuration details, database schemas,
+architecture specifications, and instruction prompts required to immediately
+resume development in any other conversation, IDE, or starting from scratch.
+
+--------------------------------------------------------------------------------
+1. PRODUCT OVERVIEW & ROLES
+--------------------------------------------------------------------------------
+Stay@Maredumilli is a boutique hotel booking platform operating under three roles:
+- Customer: Views background landing video (responsive for mobile/desktop),
+  story highlight reels fetched from the database, inspects rooms, interacts
+  with room details/carousels, filters availability by date, checks prices, and
+  books stays with attribution to influencers.
+- Hotel Owner: Logs in to view total sales, booking calendar grids, list rooms,
+  and apply calendar blocks (dates marked unavailable).
+- Super Admin: Creates hotel owners, manages rooms, views all revenue transactions,
+  registers influencers with generated referral links, and dynamically updates
+  story highlight reels.
+
+* EASTER EGGS:
+  - Super Admin can reveal hotel owner passwords in the management panel by
+    entering the master password bypass "HappyBirthday".
+
+--------------------------------------------------------------------------------
+2. TECH STACK & SYSTEM ENVIRONMENT
+--------------------------------------------------------------------------------
+- Frontend: Vanilla HTML5, Vanilla JavaScript (ES6+), Vanilla CSS (custom tokens)
+- Backend: Supabase (Authentication, PostgreSQL Database, Storage Bucket)
+- Integrations: Instagram Embeds SDK (for modal reels)
+- Hosting: Vercel (Production URL: https://we-are-going-to-create-a.vercel.app)
+- Repository: https://github.com/kandregulaashok-byte/we-are-going-to-create-a.git
+
+--------------------------------------------------------------------------------
+3. FILES DIRECTORY LAYOUT
+--------------------------------------------------------------------------------
+├── admin.html               # Super Admin Portal HTML
+├── admin.js                 # Super Admin Portal Logic
+├── app.js                   # Customer Portal Logic
+├── index.html               # Customer Portal HTML
+├── login.html               # Unified Login Portal (Admin & Owners)
+├── manifest.json            # PWA Web Manifest
+├── owner.html               # Hotel Owner Portal HTML
+├── owner.js                 # Hotel Owner Portal Logic
+├── styles.css               # Central stylesheet (Dark Theme, Responsive Grids)
+├── supabase-config.js       # Active Supabase API Keys (configured in runtime)
+├── sw.js                    # PWA Service Worker
+└── vercel.json              # Vercel Routing Configuration
+
+--------------------------------------------------------------------------------
+4. DATABASE SCHEMAS & POLICIES (SUPABASE SQL)
+--------------------------------------------------------------------------------
+Execute the following DDL script in the Supabase SQL Editor to configure:
+
+-- Create Owners Table
+CREATE TABLE IF NOT EXISTS public.hotel_owners (
+  id uuid PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  owner_name text NOT NULL,
+  phone text,
+  password_plain text,
+  active boolean NOT NULL DEFAULT true
+);
+ALTER TABLE public.hotel_owners ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "owners select" ON public.hotel_owners FOR SELECT TO authenticated USING (true);
+CREATE POLICY "owners write admin" ON public.hotel_owners FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Create Rooms Table
+CREATE TABLE IF NOT EXISTS public.rooms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  owner_id uuid REFERENCES public.hotel_owners(id) ON DELETE SET NULL,
+  room_name text NOT NULL,
+  room_type text NOT NULL,
+  available_rooms integer NOT NULL DEFAULT 0,
+  max_adults integer NOT NULL DEFAULT 1,
+  weekday_price integer NOT NULL DEFAULT 0,
+  weekend_price integer NOT NULL DEFAULT 0,
+  amenities text[] NOT NULL DEFAULT '{}',
+  special_attention text DEFAULT '',
+  image_urls text[] NOT NULL DEFAULT '{}',
+  active boolean NOT NULL DEFAULT true
+);
+ALTER TABLE public.rooms ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "rooms public select" ON public.rooms FOR SELECT USING (active = true);
+CREATE POLICY "rooms write admin" ON public.rooms FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Create Influencers Table
+CREATE TABLE IF NOT EXISTS public.influencers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  name text NOT NULL,
+  code text NOT NULL UNIQUE,
+  visits integer NOT NULL DEFAULT 0,
+  active boolean NOT NULL DEFAULT true
+);
+ALTER TABLE public.influencers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "influencers select public" ON public.influencers FOR SELECT USING (true);
+CREATE POLICY "influencers write admin" ON public.influencers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Create Bookings Table
+CREATE TABLE IF NOT EXISTS public.bookings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  room_id uuid NOT NULL REFERENCES public.rooms(id) ON DELETE CASCADE,
+  influencer_id uuid REFERENCES public.influencers(id) ON DELETE SET NULL,
+  customer_name text NOT NULL,
+  customer_phone text NOT NULL,
+  customer_email text,
+  check_in date NOT NULL,
+  check_out date NOT NULL,
+  num_rooms integer NOT NULL DEFAULT 1,
+  num_adults integer NOT NULL DEFAULT 1,
+  num_kids integer NOT NULL DEFAULT 0,
+  total_price integer NOT NULL DEFAULT 0,
+  owner_amount integer NOT NULL DEFAULT 0,
+  profit_amount integer NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'confirmed',
+  payment_option text,
+  payment_id text
+);
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "bookings public select" ON public.bookings FOR SELECT USING (true);
+CREATE POLICY "bookings public insert" ON public.bookings FOR INSERT WITH CHECK (true);
+CREATE POLICY "bookings owner modify" ON public.bookings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Create Highlights Table
+CREATE TABLE IF NOT EXISTS public.highlights (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  title text NOT NULL,
+  url text NOT NULL,
+  image_url text NOT NULL
+);
+ALTER TABLE public.highlights ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "highlights select public" ON public.highlights FOR SELECT USING (true);
+CREATE POLICY "highlights write admin" ON public.highlights FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Storage configuration:
+-- Create a public bucket in Supabase named 'room-images'.
+-- Configure RLS policies to allow public reads and authenticated uploads.
+
+-- SQL Visits Incrementor Function
+CREATE OR REPLACE FUNCTION public.increment_influencer_visits(ref_code text)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.influencers
+  SET visits = visits + 1
+  WHERE lower(code) = lower(ref_code);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+--------------------------------------------------------------------------------
+5. CONTEXT PROMPT FOR THE NEXT CHAT THREAD / IDE AGENT
+--------------------------------------------------------------------------------
+Copy and paste the text block below to start developing immediately:
+
+"I am working on the 'Stay@Maredumilli' booking platform. The project is already
+fully configured with Supabase and deployed on Vercel. 
+Please read the local `stay_maredumilli_context.txt` file in the root directory
+to understand the user roles, database schema, and file structure. 
+My goal is to continue building features on top of this. Please inspect the code
+and prepare to implement the requested modifications."
+================================================================================
