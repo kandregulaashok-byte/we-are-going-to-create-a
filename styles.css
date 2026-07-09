@@ -733,6 +733,12 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
   }
   .price-row { align-items: stretch; flex-direction: column; }
   .form-grid { grid-template-columns: 1fr; }
+  .admin-tabs { display: none; }
+  .admin-section-select { display: block; }
+  #adminOwnerAuthFields {
+    grid-column: auto !important;
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* Admin Login Styles */
@@ -1212,6 +1218,32 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
   border-color: var(--accent) !important;
 }
 
+.admin-section-nav {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-tabs .ghost-btn {
+  flex: 1 1 150px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.admin-section-select {
+  display: none;
+  min-height: 44px;
+  font-weight: 800;
+}
+
 /* Custom Calendar selector inside Modal */
 .custom-calendar-month {
   margin-bottom: 16px;
@@ -1306,3 +1338,7 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
   }
 }
 
+@media (max-width: 640px) {
+  .admin-tabs { display: none; }
+  .admin-section-select { display: block; }
+}

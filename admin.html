@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Stay@Maredumilli Admin</title>
-  <link rel="stylesheet" href="styles.css?v=influencers-fix">
+  <link rel="stylesheet" href="styles.css?v=admin-nav-fix">
   <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
   <script src="supabase-config.js" defer></script>
-  <script src="admin.js?v=influencers-fix" defer></script>
+  <script src="admin.js?v=admin-nav-fix" defer></script>
 </head>
 <body>
   <main class="app admin-app">
@@ -33,12 +33,21 @@
       </div>
 
       <!-- Navigation tabs -->
-      <div class="booking-tabs" style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
-        <button id="adminTabInventory" class="ghost-btn active" type="button">Hotel Inventory</button>
-        <button id="adminTabOwners" class="ghost-btn" type="button">Hotel Owners</button>
-        <button id="adminTabSales" class="ghost-btn" type="button">Sales Report</button>
-        <button id="adminTabInfluencers" class="ghost-btn" type="button">Influencers</button>
-        <button id="adminTabHighlights" class="ghost-btn" type="button">Highlights</button>
+      <div class="admin-section-nav">
+        <select id="adminSectionSelect" class="admin-section-select" aria-label="Choose admin section">
+          <option value="inventory">Hotel Inventory</option>
+          <option value="owners">Hotel Owners</option>
+          <option value="sales">Sales Report</option>
+          <option value="influencers">Influencers</option>
+          <option value="highlights">Highlights</option>
+        </select>
+        <div class="booking-tabs admin-tabs">
+          <button id="adminTabInventory" class="ghost-btn active" type="button" data-admin-section="inventory">Hotel Inventory</button>
+          <button id="adminTabOwners" class="ghost-btn" type="button" data-admin-section="owners">Hotel Owners</button>
+          <button id="adminTabSales" class="ghost-btn" type="button" data-admin-section="sales">Sales Report</button>
+          <button id="adminTabInfluencers" class="ghost-btn" type="button" data-admin-section="influencers">Influencers</button>
+          <button id="adminTabHighlights" class="ghost-btn" type="button" data-admin-section="highlights">Highlights</button>
+        </div>
       </div>
 
       <div id="adminStatus" class="booking-summary" style="margin-bottom: 15px; display: none;"></div>

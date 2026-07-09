@@ -35,6 +35,7 @@ const adminInfluencerList = document.querySelector("#adminInfluencerList");
 const adminTabHighlights = document.querySelector("#adminTabHighlights");
 const contentHighlights = document.querySelector("#contentHighlights");
 const adminHighlightsList = document.querySelector("#adminHighlightsList");
+const adminSectionSelect = document.querySelector("#adminSectionSelect");
 
 const adminOwnerHotel = document.querySelector("#adminOwnerHotel");
 const adminOwnerName = document.querySelector("#adminOwnerName");
@@ -303,73 +304,30 @@ if (adminLogoutBtn) {
 function setupAdminTabs() {
   if (!adminTabInventory || !adminTabOwners || !adminTabSales || !adminTabInfluencers || !adminTabHighlights) return;
 
-  adminTabInventory.addEventListener("click", () => {
-    adminTabInventory.classList.add("active");
-    adminTabOwners.classList.remove("active");
-    adminTabSales.classList.remove("active");
-    adminTabInfluencers.classList.remove("active");
-    adminTabHighlights.classList.remove("active");
-    contentInventory.classList.remove("hidden");
-    contentOwners.classList.add("hidden");
-    contentSales.classList.add("hidden");
-    contentInfluencers.classList.add("hidden");
-    contentHighlights.classList.add("hidden");
+  document.querySelectorAll("[data-admin-section]").forEach(button => {
+    button.addEventListener("click", () => showAdminSection(button.dataset.adminSection));
   });
+  adminSectionSelect?.addEventListener("change", () => showAdminSection(adminSectionSelect.value));
+  showAdminSection("inventory");
+}
 
-  adminTabOwners.addEventListener("click", () => {
-    adminTabOwners.classList.add("active");
-    adminTabInventory.classList.remove("active");
-    adminTabSales.classList.remove("active");
-    adminTabInfluencers.classList.remove("active");
-    adminTabHighlights.classList.remove("active");
-    contentOwners.classList.remove("hidden");
-    contentInventory.classList.add("hidden");
-    contentSales.classList.add("hidden");
-    contentInfluencers.classList.add("hidden");
-    contentHighlights.classList.add("hidden");
+function showAdminSection(section) {
+  const sections = {
+    inventory: { tab: adminTabInventory, content: contentInventory },
+    owners: { tab: adminTabOwners, content: contentOwners },
+    sales: { tab: adminTabSales, content: contentSales, load: loadSales },
+    influencers: { tab: adminTabInfluencers, content: contentInfluencers, load: loadInfluencers },
+    highlights: { tab: adminTabHighlights, content: contentHighlights, load: loadHighlights }
+  };
+  if (!sections[section]) section = "inventory";
+  Object.values(sections).forEach(({ tab, content }) => {
+    tab?.classList.remove("active");
+    content?.classList.add("hidden");
   });
-
-  adminTabSales.addEventListener("click", () => {
-    adminTabSales.classList.add("active");
-    adminTabInventory.classList.remove("active");
-    adminTabOwners.classList.remove("active");
-    adminTabInfluencers.classList.remove("active");
-    adminTabHighlights.classList.remove("active");
-    contentSales.classList.remove("hidden");
-    contentInventory.classList.add("hidden");
-    contentOwners.classList.add("hidden");
-    contentInfluencers.classList.add("hidden");
-    contentHighlights.classList.add("hidden");
-    loadSales();
-  });
-
-  adminTabInfluencers.addEventListener("click", () => {
-    adminTabInfluencers.classList.add("active");
-    adminTabInventory.classList.remove("active");
-    adminTabOwners.classList.remove("active");
-    adminTabSales.classList.remove("active");
-    adminTabHighlights.classList.remove("active");
-    contentInfluencers.classList.remove("hidden");
-    contentInventory.classList.add("hidden");
-    contentOwners.classList.add("hidden");
-    contentSales.classList.add("hidden");
-    contentHighlights.classList.add("hidden");
-    loadInfluencers();
-  });
-
-  adminTabHighlights.addEventListener("click", () => {
-    adminTabHighlights.classList.add("active");
-    adminTabInventory.classList.remove("active");
-    adminTabOwners.classList.remove("active");
-    adminTabSales.classList.remove("active");
-    adminTabInfluencers.classList.remove("active");
-    contentHighlights.classList.remove("hidden");
-    contentInventory.classList.add("hidden");
-    contentOwners.classList.add("hidden");
-    contentSales.classList.add("hidden");
-    contentInfluencers.classList.add("hidden");
-    loadHighlights();
-  });
+  sections[section].tab?.classList.add("active");
+  sections[section].content?.classList.remove("hidden");
+  if (adminSectionSelect) adminSectionSelect.value = section;
+  sections[section].load?.();
 }
 
 // Initialize Auth listeners on load
