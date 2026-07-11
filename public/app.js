@@ -791,11 +791,13 @@ async function attachPaymentScreenshot(bookingId, url) {
 
 function setManualPaymentLinks(amount, room) {
   const upiId = (paymentSettings.upiId || "").trim();
+  const reference = `SM${Date.now().toString().slice(-8)}`;
   const params = new URLSearchParams({
     pa: upiId,
     pn: "StayAtMaredumilli",
-    am: String(amount),
+    am: Number(amount || 0).toFixed(2),
     cu: "INR",
+    tr: reference,
     tn: `${room?.name || "Stay"} booking`
   });
   const disabled = !upiId || amount <= 0;
@@ -803,9 +805,25 @@ function setManualPaymentLinks(amount, room) {
     if (!link) return;
     link.classList.toggle("disabled", disabled);
     link.setAttribute("aria-disabled", disabled ? "true" : "false");
+    link.dataset.paymentUrl = disabled ? "" : `upi://pay?${params.toString()}`;
   });
-  if (manualPhonePeLink) manualPhonePeLink.href = disabled ? "#" : `phonepe://pay?${params.toString()}`;
-  if (manualUpiLink) manualUpiLink.href = disabled ? "#" : `upi://pay?${params.toString()}`;
+  if (manualPhonePeLink) manualPhonePeLink.href = disabled ? "javascript:void(0)" : `upi://pay?${params.toString()}`;
+  if (manualUpiLink) manualUpiLink.href = disabled ? "javascript:void(0)" : `upi://pay?${params.toString()}`;
+}
+
+function openUpiPayment(event) {
+  const link = event.target.closest("[data-payment-url]");
+  if (!link) return;
+  event.preventDefault();
+  const url = link.dataset.paymentUrl;
+  if (!url) {
+    alert("UPI ID is not set yet. Please contact support.");
+    return;
+  }
+  window.location.href = url;
+  setTimeout(() => {
+    alert("If your payment app did not open, copy the UPI ID shown here and pay manually, then upload the screenshot.");
+  }, 1800);
 }
 
 async function captureWaitlist(room) {
@@ -1404,6 +1422,7 @@ modal.addEventListener("click", event => {
 document.querySelector("#closeReelBtn").addEventListener("click", () => reelModal.close());
 document.querySelector("#closeBookingDetailsBtn")?.addEventListener("click", () => bookingDetailsModal.close());
 document.querySelector("#closeSuccessBtn")?.addEventListener("click", () => successModal.close());
+manualPaymentBox?.addEventListener("click", openUpiPayment);
 bookingsList.addEventListener("click", event => {
   const button = event.target.closest("[data-booking-index]");
   if (button) openBookingDetails(button.dataset.bookingIndex);
@@ -1589,7 +1608,7 @@ function setupRealtime() {
       loadOwnerRooms().then(render);
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, () => {
-      loadPricingSettings().then(render);
+      Promise.all([loadPricingSettings(), loadPaymentSettings()]).then(render);
     })
     .subscribe();
 }
