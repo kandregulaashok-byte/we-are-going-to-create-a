@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "build": "node scripts/write-config.js"
+    "build": "node scripts/write-config.js && node scripts/generate-seo-pages.js"
   }
 }

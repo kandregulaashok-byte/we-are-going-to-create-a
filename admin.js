@@ -1,19 +1,28 @@
-// Global error logging for debugging
 window.addEventListener("error", (e) => {
-  alert("JS Error: " + e.message + " at " + e.filename + ":" + e.lineno);
+  console.error("JS Error:", e.message, e.filename, e.lineno);
 });
 window.addEventListener("unhandledrejection", (e) => {
-  alert("JS Promise Error: " + e.reason);
+  console.error("JS Promise Error:", e.reason);
 });
 
 const adminRoomForm = document.querySelector("#adminRoomForm");
+const addHotelBtn = document.querySelector("#addHotelBtn");
+const cancelRoomFormBtn = document.querySelector("#cancelRoomFormBtn");
 const adminRoomList = document.querySelector("#adminRoomList");
+const adminBlockForm = document.querySelector("#adminBlockForm");
+const adminBlockRoom = document.querySelector("#adminBlockRoom");
+const adminBlockFrom = document.querySelector("#adminBlockFrom");
+const adminBlockTo = document.querySelector("#adminBlockTo");
+const adminBlockRooms = document.querySelector("#adminBlockRooms");
+const adminBlockHint = document.querySelector("#adminBlockHint");
 const adminStatus = document.querySelector("#adminStatus");
 const saveButton = adminRoomForm.querySelector("button[type='submit']");
 const supabaseConfig = window.STAY_SUPABASE || {};
 
 const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.supabase
-  ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey)
+  ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+      auth: { storageKey: "stay-admin-auth" }
+    })
   : null;
 
 const adminDashboard = document.querySelector("#adminDashboard");
@@ -26,11 +35,22 @@ const adminOwnerList = document.querySelector("#adminOwnerList");
 const contentInventory = document.querySelector("#contentInventory");
 const contentOwners = document.querySelector("#contentOwners");
 const contentSales = document.querySelector("#contentSales");
+const contentCustomers = document.querySelector("#contentCustomers");
+const contentPricing = document.querySelector("#contentPricing");
 const contentInfluencers = document.querySelector("#contentInfluencers");
 const adminInfluencerList = document.querySelector("#adminInfluencerList");
 const contentHighlights = document.querySelector("#contentHighlights");
 const adminHighlightsList = document.querySelector("#adminHighlightsList");
+const contentUpcoming = document.querySelector("#contentUpcoming");
+const adminUpcomingList = document.querySelector("#adminUpcomingList");
+const upcomingDaysFilter = document.querySelector("#upcomingDaysFilter");
 const adminSectionSelect = document.querySelector("#adminSectionSelect");
+const adminPricingForm = document.querySelector("#adminPricingForm");
+const adminPaymentForm = document.querySelector("#adminPaymentForm");
+const paymentMode = document.querySelector("#paymentMode");
+const adminCustomerList = document.querySelector("#adminCustomerList");
+const pricing80Surcharge = document.querySelector("#pricing80Surcharge");
+const pricing90Surcharge = document.querySelector("#pricing90Surcharge");
 
 const adminOwnerHotel = document.querySelector("#adminOwnerHotel");
 const adminOwnerName = document.querySelector("#adminOwnerName");
@@ -44,11 +64,53 @@ const adminWeekdayOwnerPrice = document.querySelector("#adminWeekdayOwnerPrice")
 const adminWeekendOwnerPrice = document.querySelector("#adminWeekendOwnerPrice");
 const adminSalesList = document.querySelector("#adminSalesList");
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function safeUrl(value) {
+  try {
+    const url = new URL(value, location.origin);
+    return /^https?:$/.test(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function validateImageFile(file) {
+  if (!file?.type?.startsWith("image/")) throw new Error("Upload image files only.");
+  if (file.size > 1024 * 1024) throw new Error("Image must be 1MB or smaller.");
+}
+
+function nextDate(dateStr) {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
 let ownerRooms = [];
 let hotelOwners = [];
 let allBookings = [];
+let upcomingBookings = [];
+let allCustomers = [];
 let editingRoomId = null;
 let currentRoomImages = [];
+const defaultPricingSettings = {
+  occupancy80Surcharge: 200,
+  occupancy90Surcharge: 300
+};
 
 function setStatus(message) {
   adminStatus.textContent = message;
@@ -59,9 +121,107 @@ function setSaving(isSaving) {
   saveButton.textContent = isSaving ? "Saving..." : editingRoomId ? "Update Room" : "Save Room";
 }
 
+function openRoomForm(editing = false) {
+  adminRoomForm.classList.remove("hidden");
+  addHotelBtn.classList.add("hidden");
+  setSaving(false);
+  if (!editing) {
+    editingRoomId = null;
+    currentRoomImages = [];
+    adminRoomForm.reset();
+    renderImageOrderList();
+  }
+  adminRoomForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeRoomForm() {
+  editingRoomId = null;
+  currentRoomImages = [];
+  adminRoomForm.reset();
+  renderImageOrderList();
+  adminRoomForm.classList.add("hidden");
+  addHotelBtn.classList.remove("hidden");
+  setSaving(false);
+}
+
 function showError(message) {
   setStatus(message);
   alert(message);
+}
+
+function getStoredPricingSettings() {
+  try {
+    return JSON.parse(localStorage.getItem("stayPricingSettings")) || defaultPricingSettings;
+  } catch {
+    return defaultPricingSettings;
+  }
+}
+
+function normalizePricingSettings(settings = {}) {
+  return {
+    occupancy80Surcharge: Math.max(0, Number(settings.occupancy80Surcharge ?? defaultPricingSettings.occupancy80Surcharge) || 0),
+    occupancy90Surcharge: Math.max(0, Number(settings.occupancy90Surcharge ?? defaultPricingSettings.occupancy90Surcharge) || 0)
+  };
+}
+
+function fillPricingForm(settings) {
+  const normalized = normalizePricingSettings(settings);
+  if (pricing80Surcharge) pricing80Surcharge.value = normalized.occupancy80Surcharge;
+  if (pricing90Surcharge) pricing90Surcharge.value = normalized.occupancy90Surcharge;
+}
+
+function fillPaymentForm(settings) {
+  if (paymentMode) paymentMode.value = settings?.mode === "razorpay" ? "razorpay" : "mock";
+}
+
+async function loadPricingSettings() {
+  fillPricingForm(getStoredPricingSettings());
+  if (!supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from("site_settings")
+    .select("value")
+    .eq("key", "dynamic_pricing")
+    .maybeSingle();
+  if (error) {
+    setStatus(`Dynamic pricing table not ready: ${error.message}`);
+    return;
+  }
+  const settings = normalizePricingSettings(data?.value);
+  localStorage.setItem("stayPricingSettings", JSON.stringify(settings));
+  fillPricingForm(settings);
+
+  const { data: paymentData } = await supabaseClient
+    .from("site_settings")
+    .select("value")
+    .eq("key", "payment")
+    .maybeSingle();
+  fillPaymentForm(paymentData?.value || { mode: "mock" });
+}
+
+async function savePricingSettings(event) {
+  event.preventDefault();
+  const settings = normalizePricingSettings({
+    occupancy80Surcharge: pricing80Surcharge?.value,
+    occupancy90Surcharge: pricing90Surcharge?.value
+  });
+  localStorage.setItem("stayPricingSettings", JSON.stringify(settings));
+  if (!supabaseClient) {
+    setStatus("Saved pricing settings locally.");
+    return;
+  }
+  const { error } = await supabaseClient
+    .from("site_settings")
+    .upsert({ key: "dynamic_pricing", value: settings, updated_at: new Date().toISOString() });
+  setStatus(error ? `Pricing save failed: ${error.message}` : "Saved dynamic pricing settings.");
+}
+
+async function savePaymentSettings(event) {
+  event.preventDefault();
+  if (!supabaseClient) return;
+  const { error } = await supabaseClient
+    .from("site_settings")
+    .upsert({ key: "payment", value: { mode: paymentMode.value }, updated_at: new Date().toISOString() });
+  setStatus(error ? `Payment mode save failed: ${error.message}` : `Payment mode saved: ${paymentMode.value}`);
 }
 
 async function loadRooms() {
@@ -86,24 +246,54 @@ async function loadRooms() {
 }
 
 function renderRooms() {
+  renderBlockRoomOptions();
   adminRoomList.innerHTML = ownerRooms.length ? ownerRooms.map(room => `
     <article class="admin-room-item">
-      <img src="${room.image_urls?.[0] || ""}" alt="${room.room_name}">
+      <img src="${escapeHtml(safeUrl(room.image_urls?.[0] || ""))}" alt="${escapeHtml(room.room_name)}">
       <div>
-        <strong>${room.room_name}</strong>
-        <p>${room.room_type} &middot; ${room.available_rooms} rooms &middot; max ${room.max_adults} adults</p>
+        <strong>${escapeHtml(room.room_name)}</strong>
+        <p>${escapeHtml(room.room_type)} &middot; ${escapeHtml(room.available_rooms)} rooms &middot; max ${escapeHtml(room.max_adults)} adults</p>
         <p style="font-size: 12px; color: var(--muted); margin-top: 4px;">
           Weekday: Website Rs.${room.weekday_price} (Owner Payout: Rs.${room.weekday_owner_price || 0}) &middot; 
           Weekend: Website Rs.${room.weekend_price} (Owner Payout: Rs.${room.weekend_owner_price || 0})
         </p>
       </div>
       <div class="admin-actions">
-        <button class="ghost-btn" data-edit="${room.id}" type="button">Edit</button>
-        <button class="ghost-btn" data-delete="${room.id}" type="button">Delete</button>
+        <button class="ghost-btn" data-edit="${escapeHtml(room.id)}" type="button">Edit</button>
+        <button class="ghost-btn" data-delete="${escapeHtml(room.id)}" type="button">Delete</button>
       </div>
     </article>
   `).join("") : "No rooms added yet.";
   if (window.lucide) lucide.createIcons();
+}
+
+function renderBlockRoomOptions() {
+  if (!adminBlockRoom) return;
+  adminBlockRoom.innerHTML = ownerRooms.map(room => `<option value="${escapeHtml(room.id)}">${escapeHtml(room.room_name)} - ${escapeHtml(room.room_type)}</option>`).join("");
+  updateBlockHint();
+}
+
+function availableForBlock(room, from, to) {
+  if (!room || !from || !to) return 0;
+  let maxBooked = 0;
+  for (let day = new Date(from); day < new Date(to); day.setDate(day.getDate() + 1)) {
+    const dayStr = day.toISOString().slice(0, 10);
+    const booked = allBookings
+      .filter(b => String(b.room_id) === String(room.id) && b.check_in <= dayStr && b.check_out > dayStr)
+      .reduce((sum, b) => sum + Number(b.num_rooms || 1), 0);
+    maxBooked = Math.max(maxBooked, booked);
+  }
+  return Math.max(0, Number(room.available_rooms || 0) - maxBooked);
+}
+
+function updateBlockHint() {
+  if (!adminBlockHint || !adminBlockRoom) return;
+  const room = ownerRooms.find(item => String(item.id) === String(adminBlockRoom.value));
+  const available = availableForBlock(room, adminBlockFrom?.value, adminBlockTo?.value);
+  adminBlockRooms.max = available || 1;
+  adminBlockHint.textContent = room && adminBlockFrom?.value && adminBlockTo?.value
+    ? `${available} room(s) free for selected dates.`
+    : "";
 }
 
 adminRoomForm.addEventListener("submit", async event => {
@@ -156,11 +346,15 @@ adminRoomForm.addEventListener("submit", async event => {
   currentRoomImages = [];
   renderImageOrderList();
   adminRoomForm.reset();
+  closeRoomForm();
   await loadRooms();
   setSaving(false);
   setStatus("Saved. Room is now available on the customer site.");
   adminRoomList.scrollIntoView({ behavior: "smooth", block: "start" });
 });
+
+addHotelBtn?.addEventListener("click", () => openRoomForm(false));
+cancelRoomFormBtn?.addEventListener("click", closeRoomForm);
 
 adminRoomList.addEventListener("click", async event => {
   const editButton = event.target.closest("[data-edit]");
@@ -173,10 +367,56 @@ adminRoomList.addEventListener("click", async event => {
   await loadRooms();
 });
 
+async function blockRoomFromAdmin(roomId, checkIn, checkOut, rooms) {
+  const room = ownerRooms.find(item => String(item.id) === String(roomId));
+  if (!room || !supabaseClient) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(checkOut) || checkOut <= checkIn) {
+    return alert("Enter valid dates. Release date must be after block date.");
+  }
+  const nights = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
+  if (nights > 30) return alert("Block maximum 30 nights at once.");
+  const available = availableForBlock(room, checkIn, checkOut);
+  if (!Number.isInteger(rooms) || rooms < 1 || rooms > available) return alert(`Enter 1 to ${available} rooms only.`);
+  if (!confirm(`Block ${rooms} room(s) in ${room.room_name} from ${checkIn} to ${checkOut}?`)) return;
+  const { error } = await supabaseClient.rpc("create_booking_safe", {
+    p_room_id: roomId,
+    p_customer_name: "Admin offline block",
+    p_customer_phone: "admin",
+    p_customer_email: null,
+    p_check_in: checkIn,
+    p_check_out: checkOut,
+    p_num_rooms: rooms,
+    p_num_adults: 1,
+    p_num_kids: 0,
+    p_payment_option: "offline",
+    p_status: "offline_blocked",
+    p_influencer_id: null,
+    p_firecamp: false
+  });
+  if (error) return alert(error.message);
+  await loadSales();
+  updateBlockHint();
+  setStatus("Room blocked.");
+}
+
+adminBlockForm?.addEventListener("submit", async event => {
+  event.preventDefault();
+  await blockRoomFromAdmin(adminBlockRoom.value, adminBlockFrom.value, adminBlockTo.value, Number(adminBlockRooms.value));
+});
+
+[adminBlockRoom, adminBlockFrom, adminBlockTo, adminBlockRooms].forEach(input => {
+  input?.addEventListener("input", () => {
+    if (input === adminBlockFrom && adminBlockFrom.value) adminBlockTo.value = nextDate(adminBlockFrom.value);
+    updateBlockHint();
+  });
+});
+
 function editRoom(id) {
   const room = ownerRooms.find(item => item.id === id);
   if (!room) return;
   editingRoomId = id;
+  adminRoomForm.classList.remove("hidden");
+  addHotelBtn.classList.add("hidden");
   currentRoomImages = (room.image_urls || []).map((url, index) => ({ url, order: index + 1 }));
   renderImageOrderList();
   document.querySelector("#adminRoomName").value = room.room_name;
@@ -198,6 +438,7 @@ function editRoom(id) {
 }
 
 async function uploadRoomImage(file) {
+  validateImageFile(file);
   if (!supabaseClient) return fileToDataUrl(file);
   const safeName = file.name.replace(/[^a-z0-9.]/gi, "-");
   const path = `rooms/${Date.now()}-${safeName}`;
@@ -225,9 +466,9 @@ function renderImageOrderList() {
   list.innerHTML = currentRoomImages.map((img, index) => `
     <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px; background: #252525; border-radius: 6px;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <img src="${img.url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+        <img src="${escapeHtml(safeUrl(img.url))}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
         <span style="font-size: 13px; color: #ccc; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${img.file ? img.file.name : "Existing Image"}
+          ${escapeHtml(img.file ? img.file.name : "Existing Image")}
         </span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -283,6 +524,17 @@ function showAuthScreen(showLogin) {
   }
 }
 
+async function requireSuperAdmin() {
+  const { data, error } = await supabaseClient.rpc("is_admin");
+  if (error || data !== true) {
+    await supabaseClient.auth.signOut();
+    alert("Super admin access only.");
+    showAuthScreen(true);
+    return false;
+  }
+  return true;
+}
+
 // Handle logout click
 if (adminLogoutBtn) {
   adminLogoutBtn.addEventListener("click", async () => {
@@ -298,6 +550,9 @@ if (adminLogoutBtn) {
 
 function setupAdminTabs() {
   adminSectionSelect?.addEventListener("change", () => showAdminSection(adminSectionSelect.value));
+  upcomingDaysFilter?.addEventListener("change", loadUpcomingBookings);
+  adminPricingForm?.addEventListener("submit", savePricingSettings);
+  adminPaymentForm?.addEventListener("submit", savePaymentSettings);
   showAdminSection("inventory");
 }
 
@@ -306,8 +561,11 @@ function showAdminSection(section) {
     inventory: { content: contentInventory },
     owners: { content: contentOwners },
     sales: { content: contentSales, load: loadSales },
+    customers: { content: contentCustomers, load: loadCustomers },
+    pricing: { content: contentPricing, load: loadPricingSettings },
     influencers: { content: contentInfluencers, load: loadInfluencers },
-    highlights: { content: contentHighlights, load: loadHighlights }
+    highlights: { content: contentHighlights, load: loadHighlights },
+    upcoming: { content: contentUpcoming, load: loadUpcomingBookings }
   };
   if (!sections[section]) section = "inventory";
   Object.values(sections).forEach(({ content }) => {
@@ -321,10 +579,15 @@ function showAdminSection(section) {
 // Initialize Auth listeners on load
 window.addEventListener("DOMContentLoaded", () => {
   setupAdminTabs();
+  if (adminBlockFrom && !adminBlockFrom.value) {
+    adminBlockFrom.value = new Date().toISOString().slice(0, 10);
+    adminBlockTo.value = nextDate(adminBlockFrom.value);
+  }
   if (supabaseClient) {
     setupRealtime();
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (session) {
+        if (!(await requireSuperAdmin())) return;
         showAuthScreen(false);
         await loadOwners();
         await loadRooms();
@@ -355,6 +618,7 @@ function setupRealtime() {
     .channel("admin-realtime-sync")
     .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => {
       loadSales();
+      if (!contentUpcoming?.classList.contains("hidden")) loadUpcomingBookings();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => {
       loadRooms();
@@ -389,16 +653,16 @@ function renderOwners() {
   adminOwnerList.innerHTML = hotelOwners.length ? hotelOwners.map(owner => `
     <article class="admin-room-item" style="padding: 14px; border-left: 4px solid var(--accent); border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
       <div style="flex-grow: 1;">
-        <strong style="font-size: 16px; color: var(--text);">${owner.hotel_name || "Hotel Owner"}</strong>
+        <strong style="font-size: 16px; color: var(--text);">${escapeHtml(owner.hotel_name || "Hotel Owner")}</strong>
         <p style="font-size: 13px; color: var(--muted); margin: 4px 0 0;">
-          <strong>Owner:</strong> ${owner.owner_name} &middot; 
-          <strong>Phone:</strong> ${owner.phone || "N/A"}
-          ${owner.alt_phone ? `&middot; <strong>Alt:</strong> ${owner.alt_phone}` : ""}
+          <strong>Owner:</strong> ${escapeHtml(owner.owner_name)} &middot; 
+          <strong>Phone:</strong> ${escapeHtml(owner.phone || "N/A")}
+          ${owner.alt_phone ? `&middot; <strong>Alt:</strong> ${escapeHtml(owner.alt_phone)}` : ""}
         </p>
       </div>
       <div class="admin-actions">
-        <button class="ghost-btn" data-edit-owner="${owner.id}" type="button" style="margin-right: 8px; border-color: rgba(255,255,255,0.15);">Edit</button>
-        <button class="ghost-btn" data-delete-owner="${owner.id}" type="button" style="color: var(--danger); border-color: rgba(214,41,118,0.2);">Delete</button>
+        <button class="ghost-btn" data-edit-owner="${escapeHtml(owner.id)}" type="button" style="margin-right: 8px; border-color: rgba(255,255,255,0.15);">Edit</button>
+        <button class="ghost-btn" data-delete-owner="${escapeHtml(owner.id)}" type="button" style="color: var(--danger); border-color: rgba(214,41,118,0.2);">Delete</button>
       </div>
     </article>
   `).join("") : "No owners registered yet.";
@@ -408,7 +672,7 @@ function populateOwnerDropdown() {
   if (!adminRoomOwner) return;
   const selected = adminRoomOwner.value;
   adminRoomOwner.innerHTML = `<option value="">Select hotel owner...</option>` +
-    hotelOwners.map(o => `<option value="${o.id}">${o.hotel_name || o.owner_name} (${o.owner_name})</option>`).join("");
+    hotelOwners.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.hotel_name || o.owner_name)} (${escapeHtml(o.owner_name)})</option>`).join("");
   adminRoomOwner.value = selected;
 }
 
@@ -548,8 +812,8 @@ if (adminOwnerList) {
 async function loadSales() {
   if (!supabaseClient) return;
   const { data, error } = await supabaseClient
-    .from("bookings")
-    .select("*, rooms(room_name)")
+    .from("admin_bookings")
+    .select("*")
     .neq("status", "cancelled")
     .order("created_at", { ascending: false });
   if (error) {
@@ -558,6 +822,41 @@ async function loadSales() {
   }
   allBookings = data || [];
   renderSales();
+  updateBlockHint();
+}
+
+async function loadCustomers() {
+  if (!supabaseClient) return;
+  if (!allBookings.length) await loadSales();
+  const { data, error } = await supabaseClient
+    .from("customer_profiles")
+    .select("*")
+    .order("last_seen_at", { ascending: false });
+  if (error) {
+    adminCustomerList.innerHTML = `Customer table not ready: ${escapeHtml(error.message)}`;
+    return;
+  }
+  allCustomers = data || [];
+  renderCustomers();
+}
+
+function renderCustomers() {
+  if (!adminCustomerList) return;
+  adminCustomerList.innerHTML = allCustomers.length ? allCustomers.map(customer => {
+    const booked = allBookings.filter(b => b.customer_email && b.customer_email === customer.email).length;
+    return `
+      <article class="sales-item">
+        <div>
+          <strong>${escapeHtml(customer.name || "Guest")}</strong>
+          <p>${escapeHtml(customer.email || "No email")} &middot; ${escapeHtml(customer.phone || "No phone")}</p>
+        </div>
+        <div style="text-align:right;">
+          <strong>${booked} booking(s)</strong>
+          <p>${escapeHtml(customer.last_seen_at || "")}</p>
+        </div>
+      </article>
+    `;
+  }).join("") : "No logged-in users yet.";
 }
 
 function renderSales() {
@@ -577,11 +876,12 @@ function renderSales() {
   adminSalesList.innerHTML = allBookings.length ? allBookings.map(b => `
     <article class="sales-item">
       <div style="flex-grow: 1;">
-        <strong style="font-size: 15px; color: var(--text);">${b.rooms?.room_name || "Room blockage/booking"}</strong>
+        <strong style="font-size: 15px; color: var(--text);">${escapeHtml(b.room_name || "Room blockage/booking")}</strong>
         <p style="font-size: 13px; color: var(--muted); margin: 4px 0 0;">
-          <strong>Guest:</strong> ${b.customer_name} (${b.customer_phone}) &middot; 
-          <strong>Dates:</strong> ${b.check_in} to ${b.check_out} &middot; 
-          <strong>Rooms:</strong> ${b.num_rooms}
+          <strong>Guest:</strong> ${escapeHtml(b.customer_name)} (${escapeHtml(b.customer_phone)}) &middot; 
+          <strong>Email:</strong> ${escapeHtml(b.customer_email || "N/A")} &middot;
+          <strong>Dates:</strong> ${escapeHtml(b.check_in)} to ${escapeHtml(b.check_out)} &middot; 
+          <strong>Rooms:</strong> ${escapeHtml(b.num_rooms)}
         </p>
       </div>
       <div style="text-align: right;">
@@ -590,14 +890,100 @@ function renderSales() {
           Payout: Rs.${(b.owner_amount || 0).toLocaleString("en-IN")} &middot; 
           <span style="color: var(--primary); font-weight: bold;">Profit: Rs.${(b.profit_amount || 0).toLocaleString("en-IN")}</span>
         </p>
+        ${b.status === "offline_blocked" ? `<button class="ghost-btn" data-release-block="${escapeHtml(b.id)}" type="button">Release block</button>` : ""}
       </div>
     </article>
   `).join("") : "No bookings recorded yet.";
 }
 
-// ponytail: PWA service worker and installation prompt logic
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(err => console.error("SW failed:", err));
+adminSalesList?.addEventListener("click", async event => {
+  const button = event.target.closest("[data-release-block]");
+  if (!button || !supabaseClient || !confirm("Release this blocked room?")) return;
+  const { error } = await supabaseClient.from("bookings").update({ status: "cancelled" }).eq("id", button.dataset.releaseBlock);
+  if (error) return alert(error.message);
+  await loadSales();
+  updateBlockHint();
+});
+
+async function loadUpcomingBookings() {
+  if (!supabaseClient || !adminUpcomingList) return;
+  const days = Number(upcomingDaysFilter?.value || 3);
+  const today = new Date().toISOString().slice(0, 10);
+  const through = addDays(new Date(), days);
+  const { data, error } = await supabaseClient
+    .from("admin_bookings")
+    .select("*")
+    .eq("status", "confirmed")
+    .gte("check_in", today)
+    .lte("check_in", through)
+    .order("check_in", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) {
+    adminUpcomingList.innerHTML = `Upcoming bookings need schema update: ${escapeHtml(error.message)}`;
+    return;
+  }
+  upcomingBookings = data || [];
+  renderUpcomingBookings();
+}
+
+function renderUpcomingBookings() {
+  if (!adminUpcomingList) return;
+  const now = Date.now();
+  adminUpcomingList.innerHTML = upcomingBookings.length ? upcomingBookings.map(booking => {
+    const status = booking.booking_confirmation_status || "not_contacted";
+    const checkInMs = new Date(`${booking.check_in}T11:00:00`).getTime();
+    const urgent = checkInMs - now <= 24 * 60 * 60 * 1000 && ["not_contacted", "unreachable"].includes(status);
+    return `
+      <article class="sales-item upcoming-item ${urgent ? "urgent" : ""}">
+        <div style="flex-grow:1;">
+          <strong>${escapeHtml(booking.customer_name || "Guest")} · ${escapeHtml(booking.customer_phone || "No phone")}</strong>
+          <p>${escapeHtml(booking.hotel_name || "Hotel")} · Owner: ${escapeHtml(booking.owner_phone || "No owner phone")}</p>
+          <p>${escapeHtml(booking.room_name || "Room")} · ${escapeHtml(booking.num_adults)} adults / ${escapeHtml(booking.num_kids)} kids · ${escapeHtml(booking.num_rooms)} room(s)</p>
+          <p>${escapeHtml(booking.check_in)} to ${escapeHtml(booking.check_out)}${booking.last_contact_attempt_at ? ` · Last call: ${escapeHtml(new Date(booking.last_contact_attempt_at).toLocaleString("en-IN"))}` : ""}</p>
+        </div>
+        <div class="upcoming-actions">
+          ${urgent ? '<span class="status-badge urgent-badge">Urgent</span>' : ""}
+          <select data-confirmation-status="${escapeHtml(booking.id)}">
+            <option value="not_contacted" ${status === "not_contacted" ? "selected" : ""}>Not yet contacted</option>
+            <option value="confirmed_coming" ${status === "confirmed_coming" ? "selected" : ""}>Confirmed coming</option>
+            <option value="confirmed_not_coming" ${status === "confirmed_not_coming" ? "selected" : ""}>Confirmed not coming</option>
+            <option value="unreachable" ${status === "unreachable" ? "selected" : ""}>Unreachable / no answer</option>
+          </select>
+          <button class="ghost-btn" data-mark-contacted="${escapeHtml(booking.id)}" type="button">Mark as contacted</button>
+        </div>
+      </article>
+    `;
+  }).join("") : "No upcoming check-ins in this window.";
+}
+
+async function updateUpcomingBooking(bookingId, status) {
+  const payload = {
+    booking_confirmation_status: status,
+    last_contact_attempt_at: new Date().toISOString()
+  };
+  if (status === "confirmed_not_coming") {
+    if (!confirm("Release this room and forfeit advance to hotel owner?")) return;
+    payload.status = "cancelled";
+  }
+  const { error } = await supabaseClient.from("bookings").update(payload).eq("id", bookingId);
+  if (error) return alert(error.message);
+  await loadUpcomingBookings();
+  await loadSales();
+  updateBlockHint();
+}
+
+adminUpcomingList?.addEventListener("click", event => {
+  const button = event.target.closest("[data-mark-contacted]");
+  if (!button) return;
+  const id = button.dataset.markContacted;
+  const select = adminUpcomingList.querySelector(`[data-confirmation-status="${CSS.escape(id)}"]`);
+  updateUpcomingBooking(id, select?.value || "not_contacted");
+});
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations?.().then(registrations => {
+    registrations.forEach(registration => registration.unregister());
+  }).catch(() => {});
 }
 
 let deferredPrompt;
@@ -637,8 +1023,8 @@ if (window.navigator.standalone === false || !window.matchMedia('(display-mode: 
 async function loadInfluencers() {
   if (!supabaseClient) return;
   const { data: bookingsData } = await supabaseClient
-    .from("bookings")
-    .select("*, rooms(room_name)")
+    .from("admin_bookings")
+    .select("*")
     .neq("status", "cancelled");
   allBookings = bookingsData || [];
 
@@ -673,21 +1059,21 @@ function renderInfluencers(influencersList) {
     return `
       <article class="influencer-item">
         <div style="flex-grow: 1;">
-          <strong style="font-size: 16px; color: var(--text);">${inf.name}</strong>
+          <strong style="font-size: 16px; color: var(--text);">${escapeHtml(inf.name)}</strong>
           <p style="font-size: 13px; color: var(--muted); margin: 4px 0 0;">
-            <strong>Code:</strong> <code style="background: #2a2a2a; padding: 2px 6px; border-radius: 4px; color: var(--accent); font-weight: bold;">${inf.code}</code> &middot; 
-            <strong>Visits:</strong> ${inf.visits} &middot;
+            <strong>Code:</strong> <code style="background: #2a2a2a; padding: 2px 6px; border-radius: 4px; color: var(--accent); font-weight: bold;">${escapeHtml(inf.code)}</code> &middot; 
+            <strong>Visits:</strong> ${escapeHtml(inf.visits)} &middot;
             <strong>Bookings:</strong> ${bookingsCount}
           </p>
           <p style="font-size: 12px; color: var(--muted); margin: 6px 0 0; display: flex; align-items: center; gap: 6px;">
-            <strong>Link:</strong> <a href="${refLink}" target="_blank" style="color: var(--primary); text-decoration: underline;">${refLink}</a>
-            <button class="ghost-btn copy-link-btn" data-link="${refLink}" type="button" style="padding: 2px 6px; font-size: 10px; border-color: rgba(255,255,255,0.15);">Copy</button>
+            <strong>Link:</strong> <a href="${escapeHtml(safeUrl(refLink))}" target="_blank" style="color: var(--primary); text-decoration: underline;">${escapeHtml(refLink)}</a>
+            <button class="ghost-btn copy-link-btn" data-link="${escapeHtml(refLink)}" type="button" style="padding: 2px 6px; font-size: 10px; border-color: rgba(255,255,255,0.15);">Copy</button>
           </p>
         </div>
         <div style="text-align: right;">
           <strong style="font-size: 16px; color: var(--text);">Revenue: Rs.${revenue.toLocaleString("en-IN")}</strong>
           <p style="margin: 4px 0 0;">
-            <button class="ghost-btn delete-influencer-btn" data-id="${inf.id}" type="button" style="color: var(--danger); border-color: rgba(214,41,118,0.2); padding: 4px 8px; font-size: 11px;">Remove</button>
+            <button class="ghost-btn delete-influencer-btn" data-id="${escapeHtml(inf.id)}" type="button" style="color: var(--danger); border-color: rgba(214,41,118,0.2); padding: 4px 8px; font-size: 11px;">Remove</button>
           </p>
         </div>
       </article>
@@ -764,16 +1150,16 @@ function renderHighlightsAdmin() {
   
   adminHighlightsList.innerHTML = allHighlights.map(h => `
     <article class="admin-room-item" style="padding: 12px; border-left: 4px solid var(--accent); border-radius: 8px; margin-bottom: 12px; display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center;">
-      <img src="${h.image_url}" alt="${h.title}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+      <img src="${escapeHtml(safeUrl(h.image_url))}" alt="${escapeHtml(h.title)}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
       <div>
-        <strong style="font-size: 15px; color: var(--text);">${h.title}</strong>
+        <strong style="font-size: 15px; color: var(--text);">${escapeHtml(h.title)}</strong>
         <p style="font-size: 12px; color: var(--muted); margin: 4px 0 0; word-break: break-all;">
-          <strong>Link:</strong> <a href="${h.url}" target="_blank" style="color: var(--primary); text-decoration: underline;">${h.url}</a>
+          <strong>Link:</strong> <a href="${escapeHtml(safeUrl(h.url))}" target="_blank" style="color: var(--primary); text-decoration: underline;">${escapeHtml(h.url)}</a>
         </p>
       </div>
       <div class="admin-actions">
-        <button class="ghost-btn edit-highlight-btn" data-id="${h.id}" type="button">Edit</button>
-        <button class="ghost-btn delete-highlight-btn" data-id="${h.id}" type="button" style="color: var(--danger); border-color: rgba(214,41,118,0.2);">Delete</button>
+        <button class="ghost-btn edit-highlight-btn" data-id="${escapeHtml(h.id)}" type="button">Edit</button>
+        <button class="ghost-btn delete-highlight-btn" data-id="${escapeHtml(h.id)}" type="button" style="color: var(--danger); border-color: rgba(214,41,118,0.2);">Delete</button>
       </div>
     </article>
   `).join("");
@@ -814,6 +1200,7 @@ function renderHighlightsAdmin() {
 }
 
 async function uploadHighlightImage(file) {
+  validateImageFile(file);
   if (!supabaseClient) return "";
   const safeName = file.name.replace(/[^a-z0-9.]/gi, "-");
   const path = `highlights/${Date.now()}-${safeName}`;

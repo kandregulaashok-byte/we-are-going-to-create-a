@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | Stay@Maredumilli</title>
-  <link rel="stylesheet" href="styles.css?v=stitch-20260708-2">
+  <meta name="description" content="Secure Stay@Maredumilli admin and hotel owner login.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=custom-domain">
   <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
@@ -54,15 +57,17 @@
     const form = document.querySelector("#unifiedLoginForm");
     const statusDiv = document.querySelector("#loginStatus");
     const submitBtn = form.querySelector("button[type='submit']");
+    const params = new URLSearchParams(location.search);
+    const preselect = params.get("type");
     const supabaseConfig = window.STAY_SUPABASE || {};
     
     const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.supabase
-      ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey)
+      ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+          auth: { storageKey: "stay-admin-auth" }
+        })
       : null;
 
     // Prefill account type radio button based on URL param
-    const params = new URLSearchParams(location.search);
-    const preselect = params.get("type");
     if (preselect === "admin" || preselect === "owner") {
       form.elements.accountType.value = preselect;
     }
@@ -134,9 +139,10 @@
       }
     });
 
-    // ponytail: PWA service worker and installation prompt logic
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(err => console.error("SW failed:", err));
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations?.().then(registrations => {
+        registrations.forEach(registration => registration.unregister());
+      }).catch(() => {});
     }
 
     let deferredPrompt;

@@ -3,9 +3,13 @@ self.addEventListener('install', function(event) {
 });
 
 self.addEventListener('activate', function(event) {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', function(event) {
-  // ponytail: minimal fetch handler to satisfy PWA installation checks
+  event.waitUntil(
+    self.registration.unregister().then(function() {
+      return self.clients.matchAll();
+    }).then(function(clients) {
+      clients.forEach(function(client) {
+        client.navigate(client.url);
+      });
+    })
+  );
 });

@@ -1,9 +1,8 @@
-// Global error logging for debugging
 window.addEventListener("error", (e) => {
-  alert("JS Error: " + e.message + " at " + e.filename + ":" + e.lineno);
+  console.error("JS Error:", e.message, e.filename, e.lineno);
 });
 window.addEventListener("unhandledrejection", (e) => {
-  alert("JS Promise Error: " + e.reason);
+  console.error("JS Promise Error:", e.reason);
 });
 
 function getLocalDateString(date = new Date()) {
@@ -70,7 +69,9 @@ const customCalendarWrapper = document.querySelector("#customCalendarWrapper");
 
 const supabaseConfig = window.STAY_SUPABASE || {};
 const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.supabase
-  ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey)
+  ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+      auth: { storageKey: "stay-admin-auth" }
+    })
   : null;
 
 let currentOwner = null;
@@ -83,6 +84,16 @@ let isCustomBlockMode = false;
 let nightsCount = 1;
 let roomsCount = 1;
 let maxRoomsToBlock = 1;
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
 
 // Helper to format currency
 function formatPrice(value) {
@@ -165,8 +176,8 @@ async function refreshBookings() {
 
   // Fetch bookings for this owner's rooms
   const { data: bookings, error: bookingsError } = await supabaseClient
-    .from("bookings")
-    .select("*")
+    .from("owner_bookings")
+    .select("id,room_id,check_in,check_out,num_rooms,num_adults,num_kids,total_price,owner_amount,status,payment_option,created_at")
     .in("room_id", roomIds)
     .neq("status", "cancelled")
     .order("check_in", { ascending: true });
@@ -257,8 +268,8 @@ function renderCalendarGrid() {
   ownerRooms.forEach(room => {
     rowsHtml += `
       <div class="calendar-room-cell">
-        <span class="room-name">${room.room_name}</span>
-        <span class="room-type">${room.room_type} (${room.available_rooms} Room${room.available_rooms > 1 ? 's' : ''})</span>
+        <span class="room-name">${escapeHtml(room.room_name)}</span>
+        <span class="room-type">${escapeHtml(room.room_type)} (${escapeHtml(room.available_rooms)} Room${room.available_rooms > 1 ? 's' : ''})</span>
       </div>
     `;
 
@@ -381,13 +392,13 @@ function renderBookings() {
     return `
       <div class="booking-card ${isOffline ? 'offline-booking' : ''}">
         <div class="booking-card-header">
-          <span class="room-name">${room.room_name || "Unknown Room"} (${room.room_type || "-"})</span>
+          <span class="room-name">${escapeHtml(room.room_name || "Unknown Room")} (${escapeHtml(room.room_type || "-")})</span>
           <span class="date-range">${formatDate(booking.check_in)} - ${formatDate(booking.check_out)} (${diffDays} Night${diffDays > 1 ? 's' : ''})</span>
         </div>
         <div class="booking-card-body">
-          <p><strong>Guest:</strong> ${booking.customer_name}</p>
-          <p><strong>Phone:</strong> ${booking.customer_phone}</p>
-          <p><strong>Rooms:</strong> ${booking.num_rooms} Room(s)</p>
+          <p><strong>Booking:</strong> ${isOffline ? 'Offline block' : 'Customer booking'}</p>
+          <p><strong>Guests:</strong> ${escapeHtml(booking.num_adults || 0)} adult(s), ${escapeHtml(booking.num_kids || 0)} kid(s)</p>
+          <p><strong>Rooms:</strong> ${escapeHtml(booking.num_rooms)} Room(s)</p>
           <p><strong>Status:</strong> ${isOffline ? 'Offline Blocked' : 'Customer Confirmed'}</p>
           <p><strong>Your Share (Payout):</strong> Rs.${(booking.owner_amount || 0).toLocaleString("en-IN")}</p>
           ${isOffline ? '' : `<p><strong>Total Revenue:</strong> ${formatPrice(booking.total_price)}</p>`}
@@ -455,7 +466,7 @@ function openQuickModal(roomId, dateStr, remaining) {
 
   if (modalRoomId) modalRoomId.value = roomId;
   if (modalDate) modalDate.value = dateStr;
-  if (modalRoomName) modalRoomName.textContent = room.room_name + ` (${room.room_type})`;
+      if (modalRoomName) modalRoomName.textContent = room.room_name + ` (${room.room_type})`;
   if (modalDateStr) modalDateStr.textContent = formatDateWithDay(dateStr);
 
   // Reset steppers
@@ -485,8 +496,8 @@ function openQuickModal(roomId, dateStr, remaining) {
         modalBookingStatus.textContent = isOffline ? "Offline Blocked" : "Confirmed Booking";
         modalBookingStatus.style.color = isOffline ? "var(--danger)" : "var(--accent)";
       }
-      if (modalBookingGuest) modalBookingGuest.textContent = booking.customer_name;
-      if (modalBookingPhone) modalBookingPhone.textContent = booking.customer_phone;
+      if (modalBookingGuest) modalBookingGuest.textContent = isOffline ? "Offline block" : "Customer booking";
+      if (modalBookingPhone) modalBookingPhone.textContent = isOffline ? "Owner-created block" : "Hidden for customer privacy";
       if (modalBookingDates) modalBookingDates.textContent = `${formatDate(booking.check_in)} to ${formatDate(booking.check_out)}`;
       if (modalBookingRooms) modalBookingRooms.textContent = `${booking.num_rooms} Room(s)`;
       if (modalSubmitRelease) modalSubmitRelease.dataset.bookingId = booking.id;
@@ -611,25 +622,10 @@ function setupSubmissions() {
       const room = ownerRooms.find(r => r.id === roomId);
       if (!room) return;
 
-      const pricing = calculatePricing(room, checkInStr, checkOutStr, roomsCount);
-
-      const payload = {
-        room_id: roomId,
-        customer_name: guestName,
-        customer_phone: guestPhone,
-        check_in: checkInStr,
-        check_out: checkOutStr,
-        num_rooms: roomsCount,
-        status: "offline_blocked",
-        total_price: pricing.websiteTotal,
-        owner_amount: pricing.ownerTotal,
-        profit_amount: pricing.profit
-      };
-
       // Check double-booking issues for any of the dates
       const { data: overlapping, error: availError } = await supabaseClient
-        .from("bookings")
-        .select("*")
+        .from("owner_bookings")
+        .select("room_id,check_in,check_out,num_rooms,status")
         .eq("room_id", roomId)
         .neq("status", "cancelled")
         .lt("check_in", checkOutStr)
@@ -693,10 +689,21 @@ function setupSubmissions() {
       // Close modal instantly for lightning fast user response
       closeQuickModal();
 
-      // Perform insert
-      const { error: insertError } = await supabaseClient
-        .from("bookings")
-        .insert(payload);
+      const { error: insertError } = await supabaseClient.rpc("create_booking_safe", {
+        p_room_id: roomId,
+        p_customer_name: guestName,
+        p_customer_phone: guestPhone,
+        p_customer_email: null,
+        p_check_in: checkInStr,
+        p_check_out: checkOutStr,
+        p_num_rooms: roomsCount,
+        p_num_adults: 1,
+        p_num_kids: 0,
+        p_payment_option: "offline",
+        p_status: "offline_blocked",
+        p_influencer_id: null,
+        p_firecamp: false
+      });
 
       if (insertError) {
         // Revert cells to original state on failure
@@ -785,7 +792,7 @@ function setupCustomBlockerBtn() {
       // Populate Room Select Dropdown
       if (modalRoomSelect) {
         modalRoomSelect.innerHTML = ownerRooms.map(r => `
-          <option value="${r.id}">${r.room_name} (${r.room_type})</option>
+          <option value="${escapeHtml(r.id)}">${escapeHtml(r.room_name)} (${escapeHtml(r.room_type)})</option>
         `).join("");
       }
       
@@ -939,9 +946,10 @@ function calculatePricing(room, fromStr, toStr, numRooms = 1) {
   };
 }
 
-// ponytail: PWA service worker and installation prompt logic
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(err => console.error("SW failed:", err));
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations?.().then(registrations => {
+    registrations.forEach(registration => registration.unregister());
+  }).catch(() => {});
 }
 
 let deferredPrompt;
