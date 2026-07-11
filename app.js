@@ -20,6 +20,11 @@ const bookingRoomSummary = document.querySelector("#bookingRoomSummary");
 const billSummary = document.querySelector("#billSummary");
 const firecampField = document.querySelector("#firecampField");
 const firecampInput = document.querySelector("#firecampInput");
+const manualPaymentBox = document.querySelector("#manualPaymentBox");
+const manualUpiId = document.querySelector("#manualUpiId");
+const manualPhonePeLink = document.querySelector("#manualPhonePeLink");
+const manualUpiLink = document.querySelector("#manualUpiLink");
+const paymentScreenshotInput = document.querySelector("#paymentScreenshotInput");
 const travelInterestInput = document.querySelector("#travelInterestInput");
 const policyConsentInput = document.querySelector("#policyConsentInput");
 const reelTitle = document.querySelector("#reelTitle");
@@ -79,7 +84,7 @@ const defaultPricingSettings = {
   occupancy90Surcharge: 300
 };
 let pricingSettings = normalizePricingSettings(getStore("stayPricingSettings", defaultPricingSettings));
-let paymentSettings = getStore("stayPaymentSettings", { mode: "mock" });
+let paymentSettings = getStore("stayPaymentSettings", { mode: "manual", upiId: "" });
 
 function pendingBookingId() {
   return localStorage.getItem("stayPendingRoomId") || new URLSearchParams(location.search).get("book");
@@ -159,7 +164,9 @@ async function loadPaymentSettings() {
   if (!supabaseClient) return;
   const { data, error } = await supabaseClient.rpc("get_payment_settings");
   if (error) return;
-  paymentSettings = data?.mode === "razorpay" ? { mode: "razorpay" } : { mode: "mock" };
+  paymentSettings = ["manual", "mock", "razorpay"].includes(data?.mode)
+    ? { mode: data.mode, upiId: data.upiId || "" }
+    : { mode: "manual", upiId: "" };
   setStore("stayPaymentSettings", paymentSettings);
 }
 
@@ -738,7 +745,7 @@ function saveCustomerProfile() {
   }).then(() => {}, () => {});
 }
 
-async function createMockBooking(room, details, pricing) {
+async function createMockBooking(room, details, pricing, status = "confirmed") {
   if (!supabaseClient) return Date.now();
   const { data, error } = await supabaseClient.rpc("create_booking_safe", {
     p_room_id: room.id,
@@ -751,12 +758,54 @@ async function createMockBooking(room, details, pricing) {
     p_num_adults: details.adults,
     p_num_kids: details.children,
     p_payment_option: details.payment,
-    p_status: "confirmed",
+    p_status: status,
     p_influencer_id: localStorage.getItem("influencer_id") || null,
     p_firecamp: details.firecamp
   });
   if (error) throw error;
   return data || Date.now();
+}
+
+async function uploadPaymentScreenshot(file, bookingId) {
+  if (!file) return "";
+  validateImageFile(file);
+  if (!supabaseClient) return fileToDataUrl(file);
+  const path = `payment-screenshots/${bookingId}-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "-")}`;
+  const { error } = await supabaseClient.storage
+    .from(supabaseConfig.roomBucket || "room-images")
+    .upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data } = supabaseClient.storage
+    .from(supabaseConfig.roomBucket || "room-images")
+    .getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function attachPaymentScreenshot(bookingId, url) {
+  if (!supabaseClient || !url) return;
+  await supabaseClient.rpc("attach_booking_payment_screenshot", {
+    p_booking_id: bookingId,
+    p_screenshot_url: url
+  });
+}
+
+function setManualPaymentLinks(amount, room) {
+  const upiId = (paymentSettings.upiId || "").trim();
+  const params = new URLSearchParams({
+    pa: upiId,
+    pn: "StayAtMaredumilli",
+    am: String(amount),
+    cu: "INR",
+    tn: `${room?.name || "Stay"} booking`
+  });
+  const disabled = !upiId || amount <= 0;
+  [manualPhonePeLink, manualUpiLink].forEach(link => {
+    if (!link) return;
+    link.classList.toggle("disabled", disabled);
+    link.setAttribute("aria-disabled", disabled ? "true" : "false");
+  });
+  if (manualPhonePeLink) manualPhonePeLink.href = disabled ? "#" : `phonepe://pay?${params.toString()}`;
+  if (manualUpiLink) manualUpiLink.href = disabled ? "#" : `upi://pay?${params.toString()}`;
 }
 
 async function captureWaitlist(room) {
@@ -939,6 +988,11 @@ function renderCheckoutSummary(room, details) {
   const payNow = Math.round(total * paymentPercent / 100);
   const weekdayOnly = isWeekdayOnly(fitted.from, fitted.to);
   document.querySelector("#couponField").classList.toggle("hidden", !weekdayOnly);
+  const manualMode = paymentSettings.mode !== "razorpay" && paymentSettings.mode !== "mock";
+  manualPaymentBox?.classList.toggle("hidden", !manualMode);
+  if (manualUpiId) manualUpiId.textContent = paymentSettings.upiId || "UPI ID will be shared on WhatsApp";
+  if (paymentScreenshotInput) paymentScreenshotInput.required = manualMode;
+  if (manualMode) setManualPaymentLinks(payNow, room);
   firecampField.classList.toggle("hidden", !hasFirecamp(room));
   firecampField.lastChild.textContent = ` Add firecamp for Rs.${firecampAmount.toLocaleString("en-IN")}`;
   bookingRoomSummary.innerHTML = `
@@ -957,6 +1011,7 @@ function renderCheckoutSummary(room, details) {
     ${fitted.partialFit ? `<p class="capacity-warning">Booking ${fitted.maxAdults} adult(s) here. Please book the remaining ${fitted.requestedAdults - fitted.maxAdults} adult(s) in another hotel.</p>` : ""}
     <b>Total: Rs.${total.toLocaleString("en-IN")}</b>
     <b>Pay now (${paymentPercent}%): Rs.${payNow.toLocaleString("en-IN")}</b>
+    ${manualMode ? `<p>After payment, upload the screenshot below. Our team confirms manually within 10 minutes.</p>` : ""}
   `;
 }
 function isWeekdayOnly(from, to) {
@@ -1222,6 +1277,16 @@ bookingForm.addEventListener("submit", async event => {
   const guestName = document.querySelector("#bookingName").value.trim();
   const guestPhone = document.querySelector("#bookingPhone").value.trim();
   const guestEmail = document.querySelector("#bookingEmail").value.trim();
+  const manualMode = paymentSettings.mode !== "razorpay" && paymentSettings.mode !== "mock";
+  const screenshotFile = paymentScreenshotInput?.files?.[0] || null;
+  if (manualMode && !paymentSettings.upiId?.trim() && !editingDetailsOnly) {
+    alert("UPI payment is not configured yet. Please contact support.");
+    return;
+  }
+  if (manualMode && !screenshotFile && !editingDetailsOnly) {
+    alert("Please pay by UPI and upload the payment screenshot before confirming.");
+    return;
+  }
 
   bookingDetails = {
     name: guestName,
@@ -1242,7 +1307,7 @@ bookingForm.addEventListener("submit", async event => {
   if (!editingDetailsOnly) {
     const submitBtn = bookingForm.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = paymentSettings.mode === "razorpay" ? "Opening payment..." : "Confirming...";
+    submitBtn.textContent = paymentSettings.mode === "razorpay" ? "Opening payment..." : "Submitting...";
     try {
       let bookingId;
       if (paymentSettings.mode === "razorpay") {
@@ -1269,7 +1334,17 @@ bookingForm.addEventListener("submit", async event => {
         if (!holdResponse.ok) throw new Error(hold.error || "Could not hold rooms for payment.");
         bookingId = await startRazorpayPayment(hold, bookingDetails, room, pricing);
       } else {
-        bookingId = await createMockBooking(room, bookingDetails, pricing);
+        bookingId = await createMockBooking(room, bookingDetails, pricing, manualMode ? "pending_payment" : "confirmed");
+        if (manualMode) {
+          try {
+            const screenshotUrl = await uploadPaymentScreenshot(screenshotFile, bookingId);
+            await attachPaymentScreenshot(bookingId, screenshotUrl);
+            bookingDetails.paymentScreenshotUrl = screenshotUrl;
+          } catch (uploadError) {
+            await supabaseClient?.from("bookings").update({ status: "cancelled" }).eq("id", bookingId).catch(() => {});
+            throw uploadError;
+          }
+        }
       }
       bookings = [{
         ...bookingDetails,
@@ -1278,16 +1353,18 @@ bookingForm.addEventListener("submit", async event => {
         roomName: room.name,
         roomImage: room.images[0],
         price: pricing.perDay,
-        status: "Confirmed"
+        status: manualMode ? "Payment submitted" : "Confirmed"
       }, ...bookings];
       await loadAllBookings();
       setStore("stayBookings", bookings);
       const travelLeadSaved = bookingDetails.travelInterest
         ? await saveTravelInterestLead(room, bookingDetails)
         : false;
-      successMessage = travelLeadSaved
-        ? `Booking confirmed. Reference ID: ${bookingReference(bookingId)}. Welcome to Stay@Maredumilli! Our team will contact you one day before check-in about travel packages.`
-        : `Booking confirmed. Reference ID: ${bookingReference(bookingId)}. Welcome to Stay@Maredumilli!`;
+      successMessage = manualMode
+        ? `Payment screenshot uploaded. Reference ID: ${bookingReference(bookingId)}. Your room is held now. Our team will verify payment and confirm or cancel the booking within 5-10 minutes.`
+        : travelLeadSaved
+          ? `Booking confirmed. Reference ID: ${bookingReference(bookingId)}. Welcome to Stay@Maredumilli! Our team will contact you one day before check-in about travel packages.`
+          : `Booking confirmed. Reference ID: ${bookingReference(bookingId)}. Welcome to Stay@Maredumilli!`;
       submitBtn.disabled = false;
       submitBtn.textContent = "Pay & Confirm";
     } catch (error) {
@@ -1336,7 +1413,9 @@ document.querySelector("#logoutBtn")?.addEventListener("click", async () => {
   ["stayAuthUserKey", "stayProfile", "stayBookingDetails", "stayLoginStartedAt", "stay-customer-auth"].forEach(key => localStorage.removeItem(key));
   location.reload();
 });
-document.querySelector(".support-btn").addEventListener("click", () => alert("Support is available through booking callbacks for now. WhatsApp direct chat will be connected before public launch."));
+document.querySelector(".support-btn").addEventListener("click", () => {
+  window.open("https://wa.me/919392439935", "_blank", "noopener");
+});
 document.querySelector("#filterToggle").addEventListener("click", () => document.querySelector("#controlsPanel").classList.toggle("hidden"));
 document.querySelector("#editTripBtn").addEventListener("click", openSearchQuery);
 document.querySelector("#applyFiltersBtn").addEventListener("click", () => {

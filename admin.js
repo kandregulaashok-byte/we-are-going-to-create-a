@@ -48,6 +48,7 @@ const adminSectionSelect = document.querySelector("#adminSectionSelect");
 const adminPricingForm = document.querySelector("#adminPricingForm");
 const adminPaymentForm = document.querySelector("#adminPaymentForm");
 const paymentMode = document.querySelector("#paymentMode");
+const paymentUpiId = document.querySelector("#paymentUpiId");
 const adminCustomerList = document.querySelector("#adminCustomerList");
 const pricing80Surcharge = document.querySelector("#pricing80Surcharge");
 const pricing90Surcharge = document.querySelector("#pricing90Surcharge");
@@ -171,7 +172,8 @@ function fillPricingForm(settings) {
 }
 
 function fillPaymentForm(settings) {
-  if (paymentMode) paymentMode.value = settings?.mode === "razorpay" ? "razorpay" : "mock";
+  if (paymentMode) paymentMode.value = ["manual", "mock", "razorpay"].includes(settings?.mode) ? settings.mode : "manual";
+  if (paymentUpiId) paymentUpiId.value = settings?.upiId || "";
 }
 
 async function loadPricingSettings() {
@@ -218,10 +220,11 @@ async function savePricingSettings(event) {
 async function savePaymentSettings(event) {
   event.preventDefault();
   if (!supabaseClient) return;
+  const value = { mode: paymentMode.value, upiId: paymentUpiId?.value?.trim() || "" };
   const { error } = await supabaseClient
     .from("site_settings")
-    .upsert({ key: "payment", value: { mode: paymentMode.value }, updated_at: new Date().toISOString() });
-  setStatus(error ? `Payment mode save failed: ${error.message}` : `Payment mode saved: ${paymentMode.value}`);
+    .upsert({ key: "payment", value, updated_at: new Date().toISOString() });
+  setStatus(error ? `Payment mode save failed: ${error.message}` : `Payment mode saved: ${value.mode}`);
 }
 
 async function loadRooms() {
@@ -883,6 +886,7 @@ function renderSales() {
           <strong>Dates:</strong> ${escapeHtml(b.check_in)} to ${escapeHtml(b.check_out)} &middot; 
           <strong>Rooms:</strong> ${escapeHtml(b.num_rooms)}
         </p>
+        ${b.payment_screenshot_url ? `<p><a href="${escapeHtml(b.payment_screenshot_url)}" target="_blank" rel="noopener">View payment screenshot</a> &middot; ${escapeHtml(b.manual_payment_status || "submitted")}</p>` : ""}
       </div>
       <div style="text-align: right;">
         <strong style="font-size: 15px; color: var(--text);">Revenue: Rs.${b.total_price.toLocaleString("en-IN")}</strong>
@@ -890,6 +894,10 @@ function renderSales() {
           Payout: Rs.${(b.owner_amount || 0).toLocaleString("en-IN")} &middot; 
           <span style="color: var(--primary); font-weight: bold;">Profit: Rs.${(b.profit_amount || 0).toLocaleString("en-IN")}</span>
         </p>
+        ${b.status === "pending_payment" ? `
+          <button class="primary-btn" data-confirm-manual-payment="${escapeHtml(b.id)}" type="button">Confirm payment</button>
+          <button class="ghost-btn" data-cancel-manual-payment="${escapeHtml(b.id)}" type="button">Cancel booking</button>
+        ` : ""}
         ${b.status === "offline_blocked" ? `<button class="ghost-btn" data-release-block="${escapeHtml(b.id)}" type="button">Release block</button>` : ""}
       </div>
     </article>
@@ -897,6 +905,32 @@ function renderSales() {
 }
 
 adminSalesList?.addEventListener("click", async event => {
+  const confirmManual = event.target.closest("[data-confirm-manual-payment]");
+  if (confirmManual && supabaseClient && confirm("Confirm this UPI payment and booking?")) {
+    const { error } = await supabaseClient.rpc("set_manual_booking_payment_status", {
+      p_booking_id: confirmManual.dataset.confirmManualPayment,
+      p_confirm: true
+    });
+    if (error) return alert(error.message);
+    await loadSales();
+    await loadUpcomingBookings();
+    updateBlockHint();
+    return;
+  }
+
+  const cancelManual = event.target.closest("[data-cancel-manual-payment]");
+  if (cancelManual && supabaseClient && confirm("Cancel this booking and release the room(s)?")) {
+    const { error } = await supabaseClient.rpc("set_manual_booking_payment_status", {
+      p_booking_id: cancelManual.dataset.cancelManualPayment,
+      p_confirm: false
+    });
+    if (error) return alert(error.message);
+    await loadSales();
+    await loadUpcomingBookings();
+    updateBlockHint();
+    return;
+  }
+
   const button = event.target.closest("[data-release-block]");
   if (!button || !supabaseClient || !confirm("Release this blocked room?")) return;
   const { error } = await supabaseClient.from("bookings").update({ status: "cancelled" }).eq("id", button.dataset.releaseBlock);

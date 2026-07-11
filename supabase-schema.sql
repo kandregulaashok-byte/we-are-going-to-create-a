@@ -125,7 +125,7 @@ values ('dynamic_pricing', '{"occupancy80Surcharge": 200, "occupancy90Surcharge"
 on conflict (key) do nothing;
 
 insert into public.site_settings (key, value)
-values ('payment', '{"mode": "mock"}'::jsonb)
+values ('payment', '{"mode": "manual", "upiId": ""}'::jsonb)
 on conflict (key) do nothing;
 
 create table if not exists public.profiles (
@@ -147,6 +147,8 @@ alter table public.bookings add column if not exists influencer_id uuid;
 alter table public.bookings add column if not exists firecamp boolean not null default false;
 alter table public.bookings add column if not exists booking_confirmation_status text not null default 'not_contacted';
 alter table public.bookings add column if not exists last_contact_attempt_at timestamptz;
+alter table public.bookings add column if not exists payment_screenshot_url text;
+alter table public.bookings add column if not exists manual_payment_status text not null default 'not_required';
 
 create table if not exists public.highlights (
   id uuid primary key default gen_random_uuid(),
@@ -504,7 +506,7 @@ begin
   if p_num_rooms < 1 then
     raise exception 'Select at least one room.';
   end if;
-  if p_status not in ('confirmed', 'offline_blocked') then
+  if p_status not in ('confirmed', 'offline_blocked', 'pending_payment') then
     raise exception 'Invalid booking status.';
   end if;
 
@@ -522,7 +524,7 @@ begin
     raise exception 'You cannot block this room.';
   end if;
 
-  if p_status = 'confirmed' and p_num_adults > p_num_rooms * v_room.max_adults then
+  if p_status in ('confirmed', 'pending_payment') and p_num_adults > p_num_rooms * v_room.max_adults then
     raise exception 'Guest count exceeds room capacity.';
   end if;
 
@@ -839,6 +841,63 @@ $$;
 revoke all on function public.create_room_lead(uuid, text, date, date) from public;
 grant execute on function public.create_room_lead(uuid, text, date, date) to anon, authenticated;
 
+create or replace function public.attach_booking_payment_screenshot(p_booking_id uuid, p_screenshot_url text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if nullif(p_screenshot_url, '') is null then
+    raise exception 'Payment screenshot is required.';
+  end if;
+
+  update public.bookings
+  set payment_screenshot_url = p_screenshot_url,
+      manual_payment_status = 'submitted'
+  where id = p_booking_id
+    and (
+      public.is_admin()
+      or customer_email = (auth.jwt() ->> 'email')
+    );
+
+  if not found then
+    raise exception 'Booking not found for this user.';
+  end if;
+end;
+$$;
+
+revoke all on function public.attach_booking_payment_screenshot(uuid, text) from public;
+grant execute on function public.attach_booking_payment_screenshot(uuid, text) to authenticated;
+
+create or replace function public.set_manual_booking_payment_status(p_booking_id uuid, p_confirm boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Admin only.';
+  end if;
+
+  update public.bookings
+  set status = case when p_confirm then 'confirmed' else 'cancelled' end,
+      manual_payment_status = case when p_confirm then 'verified' else 'rejected' end,
+      booking_confirmation_status = case when p_confirm then booking_confirmation_status else 'confirmed_not_coming' end,
+      last_contact_attempt_at = now()
+  where id = p_booking_id
+    and status = 'pending_payment';
+
+  if not found then
+    raise exception 'Pending manual payment booking not found.';
+  end if;
+end;
+$$;
+
+revoke all on function public.set_manual_booking_payment_status(uuid, boolean) from public;
+grant execute on function public.set_manual_booking_payment_status(uuid, boolean) to authenticated;
+
 create or replace function public.get_payment_settings()
 returns jsonb
 language sql
@@ -848,7 +907,7 @@ set search_path = public
 as $$
   select coalesce(
     (select value from public.site_settings where key = 'payment'),
-    '{"mode": "mock"}'::jsonb
+    '{"mode": "manual", "upiId": ""}'::jsonb
   );
 $$;
 

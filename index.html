@@ -131,7 +131,7 @@
         </section>
         <section class="panel">
           <h3>Support</h3>
-          <p>For booking help, use WhatsApp support or the sold-out room callback flow.</p>
+          <p>For bookings, travel packages, payment support, cancellations, or general enquiries, contact StayAtMaredumilli. WhatsApp: +91 93924 39935. Email: kandregula.ashok@gmail.com. Support hours: 8:00 AM to 10:00 PM, Monday to Sunday.</p>
           <button class="support-btn" type="button"><i data-lucide="message-circle"></i> WhatsApp support</button>
           <p><a href="privacy.html">Privacy Policy</a></p>
           <p><a href="faq.html">FAQ</a></p>
@@ -179,6 +179,15 @@
           </select>
         </label>
         <label id="couponField" class="hidden">Weekday coupon <input id="couponInput" placeholder="Enter coupon code"></label>
+      </div>
+      <div id="manualPaymentBox" class="manual-payment-box hidden">
+        <strong>Manual UPI payment</strong>
+        <p>Pay the shown amount to <b id="manualUpiId">UPI ID not set</b>, then upload the payment screenshot. Rooms will be held while our team verifies payment in 5-10 minutes.</p>
+        <div class="manual-payment-actions">
+          <a id="manualPhonePeLink" class="ghost-btn" href="#" target="_blank" rel="noopener">Open PhonePe</a>
+          <a id="manualUpiLink" class="ghost-btn" href="#" target="_blank" rel="noopener">Open UPI app</a>
+        </div>
+        <label>Payment screenshot <input id="paymentScreenshotInput" type="file" accept="image/*"></label>
       </div>
       <p class="policy"><strong>No cancellations and no refunds.</strong> Once payment is made, the booking amount is not refundable for any reason. Need help before payment? Use Profile > Support.</p>
       <label class="addon-check policy-consent"><input id="policyConsentInput" type="checkbox" required> I have read and agree to the <a href="/policies/terms-of-service" target="_blank" rel="noopener">Terms of Service</a> and <a href="/policies/cancellation-policy" target="_blank" rel="noopener">Cancellation Policy</a>, including the no-cancellation and no-refund policy.</label>

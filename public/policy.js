@@ -15,6 +15,18 @@ const NO_REFUND_NOTICE = {
   te: "రద్దులు మరియు రీఫండ్లు లేవు. చెల్లింపు చేసిన తర్వాత, ఏ కారణం చేతనైనా బుకింగ్ మొత్తం తిరిగి చెల్లించబడదు.",
   hi: "कोई कैंसलेशन और कोई रिफंड नहीं। भुगतान होने के बाद किसी भी कारण से बुकिंग राशि वापस नहीं की जाएगी।"
 };
+const CONTACT_MARKDOWN = `## Contact Us
+For room bookings, travel packages, payment support, cancellations, or general enquiries, please contact us:
+
+**StayAtMaredumilli**
+
+WhatsApp: +91 93924 39935
+Email: kandregula.ashok@gmail.com
+Support Hours: 8:00 AM to 10:00 PM, Monday to Sunday
+
+We aim to respond to customer enquiries within 24 hours.
+
+For payment-related concerns, please include your name, registered mobile number, booking ID, payment reference number, and transaction date.`;
 
 function titleFor(lang) {
   return `${policyName} | Stay@Maredumilli`;
@@ -25,7 +37,7 @@ function cleanMarkdown(markdown) {
     .replaceAll("[insert date]", "11 July 2026")
     .replaceAll("[తేదీ నమోదు చేయండి]", "11 July 2026")
     .replaceAll("[तारीख डालें]", "11 July 2026")
-    .replaceAll("[insert support contact/WhatsApp number]", "Profile > Support")
+    .replaceAll("[insert support contact/WhatsApp number]", "WhatsApp: +91 93924 39935, Email: kandregula.ashok@gmail.com")
     .replaceAll("[సపోర్ట్ కాంటాక్ట్/వాట్సాప్ నంబర్ నమోదు చేయండి]", "Profile > Support")
     .replaceAll("[सहायता संपर्क/व्हाट्सएप नंबर डालें]", "Profile > Support")
     .replaceAll("[insert number]", "to be confirmed")
@@ -117,7 +129,9 @@ If a customer does not arrive for their booking, the booking amount is forfeited
 Hotel owners are not permitted to cancel or refuse a confirmed booking. If this happens, contact Stay@Maredumilli support immediately so our team can coordinate with the hotel. No refund is promised or payable by the Platform.
 
 ## 4. Questions
-For any questions about this policy or your specific booking, contact our support team through Profile > Support.`;
+For any questions about this policy or your specific booking, contact our support team.
+
+${CONTACT_MARKDOWN}`;
 }
 
 function forceTermsNoRefundSection(lang) {
@@ -162,6 +176,9 @@ async function renderPolicy(lang = "en") {
   content.innerHTML = slug === "cancellation-policy"
     ? markdownToHtml(noRefundPolicyMarkdown(lang))
     : section ? markdownToHtml(section.join("\n")) : "<p>Policy not found.</p>";
+  if (!content.textContent.includes("93924 39935")) {
+    content.insertAdjacentHTML("beforeend", markdownToHtml(CONTACT_MARKDOWN));
+  }
   if (slug === "terms-of-service") forceTermsNoRefundSection(lang);
   document.documentElement.lang = LANG_ATTR[lang] || "en";
   document.title = titleFor(lang);

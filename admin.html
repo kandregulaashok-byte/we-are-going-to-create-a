@@ -189,9 +189,13 @@
           <form id="adminPaymentForm" class="admin-form">
             <label>Checkout mode
               <select id="paymentMode">
+                <option value="manual">Manual UPI + screenshot</option>
                 <option value="mock">Mock payment for testing</option>
                 <option value="razorpay">Real Razorpay</option>
               </select>
+            </label>
+            <label>UPI ID
+              <input id="paymentUpiId" placeholder="example@upi">
             </label>
             <button class="primary-btn" type="submit">Save Payment Mode</button>
           </form>
