@@ -84,6 +84,49 @@ let upcomingBookings = [];
 let allCustomers = [];
 let editingRoomId = null;
 let currentRoomImages = [];
+
+function setStatus(message = "", isError = false) {
+  if (!adminStatus) return;
+  adminStatus.textContent = message;
+  adminStatus.style.display = message ? "block" : "none";
+  adminStatus.classList.toggle("error", Boolean(isError));
+}
+
+function notifyAdmin(message, isError = false) {
+  setStatus(message, isError);
+}
+
+function showError(message) {
+  setSaving(false);
+  notifyAdmin(message || "Something went wrong. Please try again.", true);
+}
+
+function setSaving(saving) {
+  if (!saveButton) return;
+  saveButton.disabled = Boolean(saving);
+  saveButton.textContent = saving ? "Saving..." : "Save Room";
+}
+
+function openRoomForm() {
+  editingRoomId = null;
+  currentRoomImages = [];
+  adminRoomForm.reset();
+  renderImageOrderList();
+  adminRoomForm.classList.remove("hidden");
+  addHotelBtn?.classList.add("hidden");
+  setSaving(false);
+}
+
+function closeRoomForm() {
+  editingRoomId = null;
+  currentRoomImages = [];
+  adminRoomForm.reset();
+  renderImageOrderList();
+  adminRoomForm.classList.add("hidden");
+  addHotelBtn?.classList.remove("hidden");
+  setSaving(false);
+}
+
 async function loadRooms() {
   if (!supabaseClient) {
     setStatus("Supabase not connected.");
