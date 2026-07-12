@@ -75,7 +75,7 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!supabaseClient) {
-        statusDiv.textContent = "Supabase not connected.";
+        statusDiv.textContent = "Backend not connected.";
         statusDiv.classList.remove("hidden");
         return;
       }

@@ -15,6 +15,7 @@ const adminBlockFrom = document.querySelector("#adminBlockFrom");
 const adminBlockTo = document.querySelector("#adminBlockTo");
 const adminBlockRooms = document.querySelector("#adminBlockRooms");
 const adminBlockHint = document.querySelector("#adminBlockHint");
+const adminBlockList = document.querySelector("#adminBlockList");
 const supabaseConfig = window.STAY_SUPABASE || {};
 
 const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.supabase
@@ -105,7 +106,7 @@ function closeRoomForm() {
 
 async function loadRooms() {
   if (!supabaseClient) {
-    setStatus("Supabase not connected.");
+    setStatus("Backend not connected.");
     ownerRooms = [];
     renderRooms();
     return;
@@ -120,7 +121,7 @@ async function loadRooms() {
     return;
   }
   ownerRooms = data || [];
-  setStatus("Supabase connected. Rooms and images save to backend.");
+  setStatus("Backend connected. Rooms and images save online.");
   renderRooms();
 }
 
@@ -175,9 +176,25 @@ function updateBlockHint() {
     : "";
 }
 
+function renderAdminBlocks() {
+  if (!adminBlockList) return;
+  const blocks = allBookings.filter(b => b.status === "offline_blocked");
+  adminBlockList.innerHTML = blocks.length ? blocks.map(b => `
+    <article class="admin-room-item">
+      <div>
+        <strong>${escapeHtml(b.hotel_name || b.room_name || "Blocked room")}</strong>
+        <p>${escapeHtml(b.check_in)} to ${escapeHtml(b.check_out)} &middot; ${escapeHtml(b.num_rooms)} room(s)</p>
+      </div>
+      <div class="admin-actions">
+        <button class="ghost-btn" data-release-block="${escapeHtml(b.id)}" type="button">Release</button>
+      </div>
+    </article>
+  `).join("") : `<p class="muted-line">No blocked rooms right now.</p>`;
+}
+
 adminRoomForm.addEventListener("submit", async event => {
   event.preventDefault();
-  if (!supabaseClient) return showError("Supabase not connected.");
+  if (!supabaseClient) return showError("Backend not connected.");
   setSaving(true);
   setStatus("Saving room and uploading images...");
   let imageUrls = [];
@@ -483,7 +500,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   } else {
     showAuthScreen(false);
-    setStatus("Supabase not connected.");
+    setStatus("Backend not connected.");
     ownerRooms = [];
     hotelOwners = [];
     allBookings = [];
@@ -710,6 +727,7 @@ async function loadSales() {
   }
   allBookings = data || [];
   renderSales();
+  renderAdminBlocks();
   updateBlockHint();
 }
 
@@ -803,6 +821,16 @@ function renderSales() {
   `).join("") : "No bookings recorded yet.";
 }
 
+async function releaseBlockedRoom(id) {
+  if (!id || !supabaseClient || !confirm("Release this blocked room?")) return;
+  const { error } = await supabaseClient.from("bookings").update({ status: "cancelled" }).eq("id", id);
+  if (error) return notifyAdmin(error.message, true);
+  await loadSales();
+  await loadUpcomingBookings();
+  updateBlockHint();
+  notifyAdmin("Blocked room released.");
+}
+
 adminSalesList?.addEventListener("click", async event => {
   const confirmManual = event.target.closest("[data-confirm-manual-payment]");
   if (confirmManual && supabaseClient && confirm("Confirm this UPI payment and booking?")) {
@@ -833,12 +861,12 @@ adminSalesList?.addEventListener("click", async event => {
   }
 
   const button = event.target.closest("[data-release-block]");
-  if (!button || !supabaseClient || !confirm("Release this blocked room?")) return;
-  const { error } = await supabaseClient.from("bookings").update({ status: "cancelled" }).eq("id", button.dataset.releaseBlock);
-  if (error) return notifyAdmin(error.message, true);
-  await loadSales();
-  updateBlockHint();
-  notifyAdmin("Blocked room released.");
+  if (button) await releaseBlockedRoom(button.dataset.releaseBlock);
+});
+
+adminBlockList?.addEventListener("click", event => {
+  const button = event.target.closest("[data-release-block]");
+  if (button) releaseBlockedRoom(button.dataset.releaseBlock);
 });
 
 async function loadUpcomingBookings() {
@@ -869,13 +897,20 @@ function renderUpcomingBookings() {
     const status = booking.booking_confirmation_status || "not_contacted";
     const checkInMs = new Date(`${booking.check_in}T11:00:00`).getTime();
     const urgent = checkInMs - now <= 24 * 60 * 60 * 1000 && ["not_contacted", "unreachable"].includes(status);
+    const total = Number(booking.total_price || 0);
+    const advance = String(booking.payment_option) === "100" ? total : Math.ceil(total * 0.2);
+    const balance = Math.max(0, total - advance);
     return `
       <article class="sales-item upcoming-item ${urgent ? "urgent" : ""}">
         <div style="flex-grow:1;">
-          <strong>${escapeHtml(booking.customer_name || "Guest")} · ${escapeHtml(booking.customer_phone || "No phone")}</strong>
-          <p>${escapeHtml(booking.hotel_name || "Hotel")} · Owner: ${escapeHtml(booking.owner_phone || "No owner phone")}</p>
-          <p>${escapeHtml(booking.room_name || "Room")} · ${escapeHtml(booking.num_adults)} adults / ${escapeHtml(booking.num_kids)} kids · ${escapeHtml(booking.num_rooms)} room(s)</p>
-          <p>${escapeHtml(booking.check_in)} to ${escapeHtml(booking.check_out)}${booking.last_contact_attempt_at ? ` · Last call: ${escapeHtml(new Date(booking.last_contact_attempt_at).toLocaleString("en-IN"))}` : ""}</p>
+          <strong>${escapeHtml(booking.customer_name || "Guest")} &middot; ${escapeHtml(booking.customer_phone || "No phone")}</strong>
+          <p><strong>Hotel:</strong> ${escapeHtml(booking.hotel_name || "Hotel")} &middot; ${escapeHtml(booking.room_name || "Room")}</p>
+          <p><strong>Owner:</strong> ${escapeHtml(booking.owner_name || "Not assigned")} &middot; ${escapeHtml(booking.owner_phone || "No owner phone")}</p>
+          <p><strong>Guests:</strong> ${escapeHtml(booking.num_adults)} adults / ${escapeHtml(booking.num_kids)} kids &middot; <strong>Rooms:</strong> ${escapeHtml(booking.num_rooms)}</p>
+          <p><strong>Dates:</strong> ${escapeHtml(booking.check_in)} to ${escapeHtml(booking.check_out)} &middot; <strong>Booked:</strong> ${booking.created_at ? escapeHtml(new Date(booking.created_at).toLocaleString("en-IN")) : ""}</p>
+          <p><strong>Total:</strong> Rs.${total.toLocaleString("en-IN")} &middot; <strong>Advance paid:</strong> Rs.${advance.toLocaleString("en-IN")} &middot; <strong>Balance:</strong> Rs.${balance.toLocaleString("en-IN")}</p>
+          ${booking.owner_amount ? `<p><strong>Owner payout:</strong> Rs.${Number(booking.owner_amount || 0).toLocaleString("en-IN")}</p>` : ""}
+          ${booking.last_contact_attempt_at ? `<p><strong>Last call:</strong> ${escapeHtml(new Date(booking.last_contact_attempt_at).toLocaleString("en-IN"))}</p>` : ""}
         </div>
         <div class="upcoming-actions">
           ${urgent ? '<span class="status-badge urgent-badge">Urgent</span>' : ""}
@@ -891,7 +926,6 @@ function renderUpcomingBookings() {
     `;
   }).join("") : "No upcoming check-ins in this window.";
 }
-
 async function updateUpcomingBooking(bookingId, status) {
   const payload = {
     booking_confirmation_status: status,
@@ -1219,3 +1253,4 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+

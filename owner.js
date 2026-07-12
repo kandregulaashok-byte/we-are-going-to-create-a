@@ -755,7 +755,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   } else {
     showAuthScreen(false);
-    if (ownerGreeting) ownerGreeting.textContent = "Supabase Offline mode";
+    if (ownerGreeting) ownerGreeting.textContent = "Offline mode";
     allBookings = [];
     renderCalendarGrid();
     renderBookings();

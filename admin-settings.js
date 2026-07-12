@@ -73,7 +73,7 @@ async function savePricingSettings(event) {
 
 async function savePaymentSettings(event) {
   event.preventDefault();
-  if (!supabaseClient) return notifyAdmin("Supabase is not connected. Payment mode was not saved.", true);
+  if (!supabaseClient) return notifyAdmin("Backend is not connected. Payment mode was not saved.", true);
   const value = { mode: paymentMode.value, upiId: paymentUpiId?.value?.trim() || "" };
   if (value.mode === "manual" && !value.upiId) return notifyAdmin("Enter UPI ID before saving manual payment mode.", true);
   const button = adminPaymentForm.querySelector("button[type='submit']");

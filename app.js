@@ -205,8 +205,8 @@ function render() {
 
 function renderAdminStatus() {
   adminStatus.innerHTML = supabaseClient
-    ? `<span>Supabase connected · rooms and images save to backend</span>`
-    : `<span>Supabase not connected · using this browser only</span>`;
+    ? `<span>Backend connected. Rooms and images save online.</span>`
+    : `<span>Backend not connected. Using this browser only.</span>`;
 }
 
 function renderHighlights() {
@@ -317,18 +317,11 @@ function roomCard(room, cardIndex = 0) {
 }
 
 function minRoomsForAdults(room, adults = 1) {
-  const maxAdults = Math.max(1, Number(room?.maxAdults || 1));
-  return Math.max(1, Math.ceil(Number(adults || 1) / maxAdults));
+  return window.minRoomsForAdults(Number(room?.maxAdults || 1), adults);
 }
 
 function detailsForRoom(room, details = null) {
-  const adults = Number(details?.adults || 1);
-  const roomsNeeded = minRoomsForAdults(room, adults);
-  return {
-    ...(details || {}),
-    adults,
-    rooms: Math.max(Number(details?.rooms || 1), roomsNeeded)
-  };
+  return normalizeTripDetails(details, room?.maxAdults || 1);
 }
 
 function firecampPrice(rooms = 1) {
@@ -470,14 +463,13 @@ function applyTripDetails({ from, to, adults, children }) {
     alert(error);
     return false;
   }
-  bookingDetails = {
+  bookingDetails = normalizeTripDetails({
     ...bookingDetails,
     from,
     to,
     adults: Number(adults),
-    children: Number(children),
-    rooms: 1
-  };
+    children: Number(children)
+  }, 1);
   setStore("stayBookingDetails", bookingDetails);
   render();
   return true;
@@ -489,13 +481,13 @@ function syncTripDetails(details, { alertErrors = false } = {}) {
     if (alertErrors) alert(error);
     return false;
   }
-  bookingDetails = {
+  bookingDetails = normalizeTripDetails({
     ...bookingDetails,
     ...details,
     adults: Number(details.adults),
     children: Number(details.children),
     rooms: Number(details.rooms || bookingDetails?.rooms || 1)
-  };
+  }, 1);
   setStore("stayBookingDetails", bookingDetails);
   return true;
 }
@@ -602,6 +594,23 @@ async function saveCustomerProfile() {
     p_email: profile.email || "",
     p_phone: profile.phone || ""
   });
+}
+
+async function loadCustomerProfile(user) {
+  if (!supabaseClient || !user?.id) return;
+  const { data } = await supabaseClient
+    .from("customer_profiles")
+    .select("name,phone,email")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!data) return;
+  profile = {
+    ...profile,
+    name: profile.name || data.name || "",
+    phone: profile.phone || data.phone || "",
+    email: user.email || data.email || profile.email || ""
+  };
+  setStore("stayProfile", profile);
 }
 
 async function createMockBooking(room, details, pricing, status = "confirmed", screenshotUrl = "") {
@@ -857,6 +866,7 @@ async function resumeSession(showSearch = false) {
   const { data, error } = await supabaseClient.auth.getSession();
   if (!data.session) return false;
   profileFromUser(data.session.user);
+  await loadCustomerProfile(data.session.user);
   enterApp(showSearch);
   render();
   return true;
@@ -880,6 +890,7 @@ async function consumeAuthHash() {
   history.replaceState({}, "", location.origin + location.pathname);
   if (error || !data.session) return false;
   profileFromUser(data.session.user);
+  await loadCustomerProfile(data.session.user);
   await signOutOtherCustomerSessions(data.session);
   enterApp(!bookingDetails);
   render();
@@ -1098,7 +1109,7 @@ document.querySelector("#saveProfileBtn").addEventListener("click", async event 
   profile = {
     name: document.querySelector("#profileName").value,
     phone: document.querySelector("#profilePhone").value,
-    email: document.querySelector("#profileEmail").value
+    email: profile.email || document.querySelector("#profileEmail").value
   };
   setStore("stayProfile", profile);
   button.disabled = true;

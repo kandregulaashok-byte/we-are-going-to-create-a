@@ -63,18 +63,11 @@ function firecampPrice(roomsCount = 1) {
 }
 
 function minRoomsForAdults(roomObj, adults = 1) {
-  const maxAdults = Math.max(1, Number(roomObj?.maxAdults || 1));
-  return Math.max(1, Math.ceil(Number(adults || 1) / maxAdults));
+  return window.minRoomsForAdults(Number(roomObj?.maxAdults || 1), adults);
 }
 
 function detailsForRoom(roomObj, details = null) {
-  const adults = Number(details?.adults || 1);
-  const roomsNeeded = minRoomsForAdults(roomObj, adults);
-  return {
-    ...(details || {}),
-    adults,
-    rooms: Math.max(Number(details?.rooms || 1), roomsNeeded)
-  };
+  return normalizeTripDetails(details, roomObj?.maxAdults || 1);
 }
 
 function fitDetailsToAvailability(roomObj, details = null) {
@@ -453,7 +446,7 @@ async function saveCustomerProfile() {
 
 // UI Rendering
 function checkoutDetailsFromForm() {
-  return {
+  return normalizeTripDetails({
     adults: Number(adultsInput.value || 1),
     children: Number(childrenInput.value || 0),
     rooms: Number(roomsInput.value || 1),
@@ -462,7 +455,7 @@ function checkoutDetailsFromForm() {
     payment: paymentInput.value,
     travelInterest: travelInterestInput.checked,
     firecamp: firecampInput.checked
-  };
+  }, room?.maxAdults || 1);
 }
 
 function updatePricingUI() {
@@ -471,6 +464,7 @@ function updatePricingUI() {
   const formDetails = checkoutDetailsFromForm();
   const fitted = fitDetailsToAvailability(room, formDetails);
   
+  roomsInput.value = fitted.rooms || 1;
   roomsInput.max = fitted.maxRooms || "";
   submitBtn.disabled = !fitted.maxRooms;
   
@@ -711,14 +705,15 @@ async function handleUserSession(session) {
     phone: profile.phone || ""
   };
   
-  // Fetch full profile (e.g. phone number) if it exists
-  const profileRes = await supabaseClient.rpc("upsert_customer_profile", {
-    p_name: profile.name,
-    p_email: profile.email,
-    p_phone: ""
-  });
-  if (!profileRes.error && profileRes.data) {
-    profile.phone = profileRes.data.phone || "";
+  const { data: savedProfile } = await supabaseClient
+    .from("customer_profiles")
+    .select("name,phone,email")
+    .eq("id", session.user.id)
+    .maybeSingle();
+  if (savedProfile) {
+    profile.name = profile.name || savedProfile.name || "";
+    profile.phone = profile.phone || savedProfile.phone || "";
+    profile.email = session.user.email || savedProfile.email || profile.email || "";
   }
   
   authPrompt.classList.add("hidden");
@@ -777,7 +772,7 @@ async function handleUserSession(session) {
   // Wire up change listeners
   ["input", "change"].forEach(evtName => {
     [adultsInput, childrenInput, roomsInput, fromInput, toInput, paymentInput, firecampInput].forEach(el => {
-      el.addEventListener(evtName, (e) => {
+      el.addEventListener(evtName, async (e) => {
         if (e.target.id === "adultsInput" && e.type === "change") {
           const rem = getAvailableRoomsCount(room, {
             from: fromInput.value,
@@ -790,6 +785,7 @@ async function handleUserSession(session) {
           toInput.min = nextDate;
           toInput.value = nextDate;
         }
+        if ((e.target.id === "fromInput" || e.target.id === "toInput") && e.type === "change") await loadAllBookings();
         updatePricingUI();
       });
     });

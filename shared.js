@@ -34,6 +34,20 @@ function validateTripValues({ from, to, adults, children }) {
   return "";
 }
 
+function minRoomsForAdults(maxAdultsPerRoom, adults = 1) {
+  return Math.max(1, Math.ceil(Number(adults || 1) / Math.max(1, Number(maxAdultsPerRoom || 1))));
+}
+
+function normalizeTripDetails(details = {}, maxAdultsPerRoom = 1) {
+  const base = { ...defaultTripDetails(), ...(details || {}) };
+  return {
+    ...base,
+    adults: Number(base.adults || 1),
+    children: Number(base.children || 0),
+    rooms: Math.max(Number(base.rooms || 1), minRoomsForAdults(maxAdultsPerRoom, base.adults))
+  };
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
