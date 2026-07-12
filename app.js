@@ -834,10 +834,19 @@ function openUpiPayment(event) {
     alert("UPI ID is not set yet. Please contact support.");
     return;
   }
+  sessionStorage.setItem("stayUpiOpenedAt", String(Date.now()));
+  if (selectedRoomId) localStorage.setItem("stayPendingRoomId", selectedRoomId);
   window.location.href = url;
   setTimeout(() => {
-    alert("If your payment app did not open, copy the UPI ID shown here and pay manually, then upload the screenshot.");
+    if (document.visibilityState === "visible") alert("If your payment app did not open, copy the UPI ID shown here and pay manually, then upload the screenshot.");
   }, 1800);
+}
+
+function recoverFromUpiReturn() {
+  const openedAt = Number(sessionStorage.getItem("stayUpiOpenedAt") || 0);
+  if (!openedAt || document.visibilityState === "hidden" || Date.now() - openedAt < 1000) return;
+  sessionStorage.removeItem("stayUpiOpenedAt");
+  location.reload();
 }
 
 async function captureWaitlist(room) {
@@ -1522,6 +1531,9 @@ if (searchQueryForm) {
 }
 window.addEventListener("hashchange", () => showScreen(location.hash || "#home"));
 window.addEventListener("resize", setLandingVideo);
+window.addEventListener("focus", recoverFromUpiReturn);
+window.addEventListener("pageshow", recoverFromUpiReturn);
+document.addEventListener("visibilitychange", recoverFromUpiReturn);
 window.addEventListener("DOMContentLoaded", async () => {
   capturePendingBookingParam();
   const consumedHashSession = await consumeAuthHash();
