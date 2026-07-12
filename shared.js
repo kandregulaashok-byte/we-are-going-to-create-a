@@ -107,3 +107,18 @@ function getStore(key, fallback) {
 function setStore(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
+
+function reportClientError(message, source = "", line = 0) {
+  if (!message || location.hostname === "127.0.0.1" || location.hostname === "localhost") return;
+  navigator.sendBeacon?.("/api/log-client-error", new Blob([JSON.stringify({
+    path: location.pathname,
+    message: String(message),
+    source: String(source),
+    line: Number(line) || 0
+  })], { type: "application/json" }));
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("error", event => reportClientError(event.message, event.filename, event.lineno));
+  window.addEventListener("unhandledrejection", event => reportClientError(event.reason?.message || event.reason || "Unhandled promise rejection"));
+}

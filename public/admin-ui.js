@@ -1,0 +1,35 @@
+function setStatus(message = "", isError = false) {
+  const adminStatus = document.querySelector("#adminStatus");
+  if (!adminStatus) return;
+  adminStatus.textContent = message;
+  adminStatus.style.display = message ? "block" : "none";
+  adminStatus.classList.toggle("error", Boolean(isError));
+}
+
+function notifyAdmin(message, isError = false) {
+  setStatus(message, isError);
+}
+
+function showError(message) {
+  setSaving(false);
+  notifyAdmin(message || "Something went wrong. Please try again.", true);
+}
+
+function setSaving(saving) {
+  const saveButton = document.querySelector("#adminRoomForm button[type='submit']");
+  if (!saveButton) return;
+  saveButton.disabled = Boolean(saving);
+  saveButton.textContent = saving ? "Saving..." : "Save Room";
+}
+
+function adminTable(headers, rows, emptyText) {
+  if (!rows.length) return `<p class="muted-line">${escapeHtml(emptyText)}</p>`;
+  return `
+    <div class="admin-table-wrap">
+      <table class="admin-data-table">
+        <thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead>
+        <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+    </div>
+  `;
+}
