@@ -80,6 +80,7 @@ let bookings = getStore("stayBookings", []);
 let profile = getStore("stayProfile", {});
 let expandedAmenities = [];
 let availabilityRefreshTimer = null;
+let paymentFilePickerOpen = false;
 
 const defaultPricingSettings = {
   occupancy80Surcharge: 200,
@@ -919,6 +920,7 @@ function handleTabReturn() {
 
 function rememberVisibleState() {
   if (selectedRoomId) localStorage.setItem("stayPendingRoomId", selectedRoomId);
+  if (paymentFilePickerOpen || document.activeElement === paymentScreenshotInput) return;
   closeOpenDialogs();
 }
 
@@ -928,6 +930,9 @@ function handleVisibilityChange() {
     return;
   }
   handleTabReturn();
+  setTimeout(() => {
+    paymentFilePickerOpen = false;
+  }, 500);
 }
 
 async function captureWaitlist(room) {
@@ -1528,6 +1533,16 @@ document.querySelector("#closeReelBtn").addEventListener("click", () => reelModa
 document.querySelector("#closeBookingDetailsBtn")?.addEventListener("click", () => bookingDetailsModal.close());
 document.querySelector("#closeSuccessBtn")?.addEventListener("click", () => successModal.close());
 manualPaymentBox?.addEventListener("click", openUpiPayment);
+function markPaymentFilePickerOpen() {
+  paymentFilePickerOpen = true;
+}
+paymentScreenshotInput?.addEventListener("pointerdown", markPaymentFilePickerOpen);
+paymentScreenshotInput?.addEventListener("click", markPaymentFilePickerOpen);
+paymentScreenshotInput?.addEventListener("change", () => {
+  setTimeout(() => {
+    paymentFilePickerOpen = false;
+  }, 500);
+});
 bookingsList.addEventListener("click", event => {
   const button = event.target.closest("[data-booking-index]");
   if (button) openBookingDetails(button.dataset.bookingIndex);
