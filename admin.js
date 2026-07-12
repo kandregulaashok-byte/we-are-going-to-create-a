@@ -65,30 +65,6 @@ const adminWeekdayOwnerPrice = document.querySelector("#adminWeekdayOwnerPrice")
 const adminWeekendOwnerPrice = document.querySelector("#adminWeekendOwnerPrice");
 const adminSalesList = document.querySelector("#adminSalesList");
 
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-    "'": "&#39;"
-  }[char]));
-}
-
-function safeUrl(value) {
-  try {
-    const url = new URL(value, location.origin);
-    return /^https?:$/.test(url.protocol) ? url.href : "";
-  } catch {
-    return "";
-  }
-}
-
-function validateImageFile(file) {
-  if (!file?.type?.startsWith("image/")) throw new Error("Upload image files only.");
-  if (file.size > 1024 * 1024) throw new Error("Image must be 1MB or smaller.");
-}
-
 function nextDate(dateStr) {
   const date = new Date(dateStr);
   date.setDate(date.getDate() + 1);

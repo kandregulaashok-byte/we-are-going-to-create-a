@@ -5,12 +5,6 @@ window.addEventListener("unhandledrejection", (e) => {
   console.error("JS Promise Error:", e.reason);
 });
 
-function getLocalDateString(date = new Date()) {
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - (offset * 60 * 1000));
-  return localDate.toISOString().split("T")[0];
-}
-
 const ownerDashboard = document.querySelector("#ownerDashboard");
 const ownerLogoutBtn = document.querySelector("#ownerLogoutBtn");
 
@@ -84,16 +78,6 @@ let isCustomBlockMode = false;
 let nightsCount = 1;
 let roomsCount = 1;
 let maxRoomsToBlock = 1;
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "\"": "&quot;",
-    "'": "&#39;"
-  }[char]));
-}
 
 // Helper to format currency
 function formatPrice(value) {
