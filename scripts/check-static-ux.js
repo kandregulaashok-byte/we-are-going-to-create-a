@@ -10,6 +10,7 @@ const css = read("styles.css");
 const shared = read("shared.js");
 const book = read("book.js");
 const seo = read("scripts/generate-seo-pages.js");
+const vercel = read("vercel.json");
 
 if ((index.match(/terms-of-service/g) || []).length !== 1) fail("Terms link should appear once on home/profile.");
 if ((index.match(/cancellation-policy/g) || []).length !== 1) fail("Cancellation link should appear once on home/profile.");
@@ -20,5 +21,6 @@ if (!css.includes("--bottom-nav-space: 156px")) fail("Mobile bottom spacing must
 if (!/supabase\|row-level security\|permission denied\|violates/.test(shared)) fail("Backend errors must be masked for customers.");
 if (!book.includes('loading="lazy" decoding="async"')) fail("Booking room image should not block checkout rendering.");
 if (!seo.includes('decoding="async"')) fail("SEO hotel images should decode asynchronously.");
+if (!vercel.includes('"X-Frame-Options"') || !vercel.includes('"DENY"')) fail("Clickjacking header missing.");
 
 console.log("static ux/security check passed");
