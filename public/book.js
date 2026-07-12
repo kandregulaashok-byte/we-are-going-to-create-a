@@ -478,7 +478,7 @@ function updatePricingUI() {
   }
   
   bookingRoomSummary.innerHTML = `
-    <img src="${escapeHtml(safeUrl(room.images[0]))}" alt="${escapeHtml(room.name)}">
+    <img src="${escapeHtml(safeUrl(room.images[0]))}" loading="lazy" decoding="async" alt="${escapeHtml(room.name)}">
     <div>
       <strong style="font-size: 18px; color: var(--text);">${escapeHtml(room.name)}</strong>
       <p style="margin: 4px 0 0; color: var(--muted); font-size: 14px;">${escapeHtml(room.type)} &middot; Rs.${pricing.perDay.toLocaleString("en-IN")} per room/day</p>

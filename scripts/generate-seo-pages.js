@@ -146,7 +146,7 @@ function writeHotel(room) {
     <section class="hotel-detail-hero">
       <div class="hotel-detail-carousel">
         <div class="hotel-detail-slides">
-          ${images.map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(room.room_name)} image ${index + 1}" ${index ? 'loading="lazy"' : 'fetchpriority="high"'}>`).join("")}
+          ${images.map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(room.room_name)} image ${index + 1}" decoding="async" ${index ? 'loading="lazy"' : 'fetchpriority="high"'}>`).join("")}
         </div>
         <button class="heart image-heart hotel-like" type="button" aria-label="Like ${escapeHtml(room.room_name)}">&#9825; <span>0</span></button>
         ${images.length > 1 ? `<button class="slide-btn prev hotel-prev" type="button" aria-label="Previous image">&lt;</button><button class="slide-btn next hotel-next" type="button" aria-label="Next image">&gt;</button><div class="dots">${images.map((_, i) => `<span class="${i === 0 ? "active" : ""}"></span>`).join("")}</div>` : ""}
