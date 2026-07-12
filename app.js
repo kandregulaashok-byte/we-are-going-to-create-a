@@ -34,6 +34,8 @@ const adminRoomList = document.querySelector("#adminRoomList");
 const adminStatus = document.querySelector("#adminStatus");
 const supabaseConfig = window.STAY_SUPABASE || {};
 const siteUrl = `${location.origin}/`;
+const customerAuthKeys = ["stayAuthUserKey", "stayProfile", "stayBookingDetails", "stayLoginStartedAt", "stay-customer-auth"];
+const customerSignedOutKey = "stayCustomerSignedOut";
 const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.supabase
   ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
       auth: {
@@ -959,6 +961,7 @@ function enterApp(showSearch = true) {
 
 async function resumeSession(showSearch = false) {
   if (!supabaseClient) return false;
+  if (localStorage.getItem(customerSignedOutKey) === "1") return false;
   const { data, error } = await supabaseClient.auth.getSession();
   if (!data.session) return false;
   profileFromUser(data.session.user);
@@ -976,6 +979,7 @@ async function signOutOtherCustomerSessions(session) {
 
 async function consumeAuthHash() {
   if (!supabaseClient || !location.hash.includes("access_token=")) return false;
+  localStorage.removeItem(customerSignedOutKey);
   const params = new URLSearchParams(location.hash.slice(1));
   const access_token = params.get("access_token");
   const refresh_token = params.get("refresh_token");
@@ -1508,9 +1512,14 @@ bookingsList.addEventListener("click", event => {
 });
 document.querySelector("#logoutBtn")?.addEventListener("click", async () => {
   if (!confirm("Log out from Stay@Maredumilli?")) return;
+  localStorage.setItem(customerSignedOutKey, "1");
   await supabaseClient?.auth.signOut().catch(() => {});
-  ["stayAuthUserKey", "stayProfile", "stayBookingDetails", "stayLoginStartedAt", "stay-customer-auth"].forEach(key => localStorage.removeItem(key));
-  location.reload();
+  customerAuthKeys.forEach(key => localStorage.removeItem(key));
+  profile = {};
+  bookings = [];
+  app.classList.add("hidden");
+  landing.classList.remove("hidden");
+  loginBtn.disabled = false;
 });
 document.querySelector(".support-btn").addEventListener("click", () => {
   window.open("https://wa.me/919392439935", "_blank", "noopener");
@@ -1563,6 +1572,7 @@ loginBtn.addEventListener("click", async () => {
     return;
   }
   loginBtn.disabled = true;
+  localStorage.removeItem(customerSignedOutKey);
   localStorage.setItem("stayLoginStartedAt", String(Date.now()));
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
@@ -1625,6 +1635,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   setTimeout(() => resumeSession(false), 2000);
   supabaseClient?.auth.onAuthStateChange(async (event, session) => {
     if (!session) return;
+    if (localStorage.getItem(customerSignedOutKey) === "1") {
+      await supabaseClient.auth.signOut().catch(() => {});
+      return;
+    }
     profileFromUser(session.user);
     if (event === "SIGNED_IN") await signOutOtherCustomerSessions(session);
     enterApp();
