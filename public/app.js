@@ -811,23 +811,28 @@ function setManualPaymentLinks(amount, room) {
     link.dataset.paymentUrl = disabled ? "" : genericUrl;
   });
   if (manualPhonePeLink) {
-    manualPhonePeLink.href = disabled ? "javascript:void(0)" : phonePeUrl;
+    manualPhonePeLink.href = "javascript:void(0)";
     manualPhonePeLink.dataset.paymentUrl = disabled ? "" : phonePeUrl;
   }
-  if (manualUpiLink) manualUpiLink.href = disabled ? "javascript:void(0)" : genericUrl;
+  if (manualUpiLink) manualUpiLink.href = "javascript:void(0)";
 }
 
 function openUpiPayment(event) {
   const link = event.target.closest("[data-payment-url]");
   if (!link) return;
+  event.preventDefault();
   const url = link.dataset.paymentUrl;
   if (!url) {
-    event.preventDefault();
     alert("UPI ID is not set yet. Please contact support.");
     return;
   }
   sessionStorage.setItem("stayUpiOpenedAt", String(Date.now()));
   if (selectedRoomId) localStorage.setItem("stayPendingRoomId", selectedRoomId);
+  const frame = document.createElement("iframe");
+  frame.style.display = "none";
+  frame.src = url;
+  document.body.appendChild(frame);
+  setTimeout(() => frame.remove(), 3000);
   setTimeout(() => {
     if (document.visibilityState === "visible") alert("If your payment app did not open, copy the UPI ID shown here and pay manually, then upload the screenshot.");
   }, 1800);
