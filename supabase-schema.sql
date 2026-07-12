@@ -98,15 +98,7 @@ alter table public.bookings drop constraint if exists bookings_room_id_check_in_
 -- Enable RLS on bookings
 alter table public.bookings enable row level security;
 
--- Policies for bookings
-drop policy if exists "bookings public read" on public.bookings;
-create policy "bookings public read" on public.bookings for select using (true);
-
-drop policy if exists "bookings public insert" on public.bookings;
-create policy "bookings public insert" on public.bookings for insert with check (true);
-
-drop policy if exists "bookings owner modify" on public.bookings;
-create policy "bookings owner modify" on public.bookings for all to authenticated using (true) with check (true);
+-- Booking policies are defined after public.is_admin() exists.
 
 create table if not exists public.site_settings (
   key text primary key,
@@ -310,19 +302,25 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists "bookings owner modify" on public.bookings;
 drop policy if exists "bookings public read" on public.bookings;
 drop policy if exists "bookings public insert" on public.bookings;
-drop policy if exists "bookings owner modify" on public.bookings;
 drop policy if exists "bookings admin all" on public.bookings;
 drop policy if exists "bookings owner read update" on public.bookings;
 drop policy if exists "bookings owner read" on public.bookings;
 drop policy if exists "bookings owner update" on public.bookings;
+drop policy if exists "bookings customer read" on public.bookings;
 
 create policy "bookings admin all"
 on public.bookings for all
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy "bookings customer read"
+on public.bookings for select
+to authenticated
+using (customer_email = (auth.jwt() ->> 'email'));
 
 create policy "bookings owner read"
 on public.bookings for select
@@ -509,6 +507,12 @@ begin
   if p_status not in ('confirmed', 'offline_blocked', 'pending_payment') then
     raise exception 'Invalid booking status.';
   end if;
+  if p_status in ('confirmed', 'pending_payment')
+     and coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role'
+     and not public.is_admin()
+     and coalesce(auth.jwt() ->> 'email', '') <> coalesce(p_customer_email, '') then
+    raise exception 'You cannot create a booking for another customer.';
+  end if;
 
   select * into v_room
   from public.rooms
@@ -588,7 +592,7 @@ end;
 $$;
 
 revoke all on function public.create_booking_safe(uuid, text, text, text, date, date, integer, integer, integer, text, text, uuid, boolean) from public;
-grant execute on function public.create_booking_safe(uuid, text, text, text, date, date, integer, integer, integer, text, text, uuid, boolean) to anon, authenticated;
+grant execute on function public.create_booking_safe(uuid, text, text, text, date, date, integer, integer, integer, text, text, uuid, boolean) to authenticated, service_role;
 
 alter table public.booking_holds enable row level security;
 

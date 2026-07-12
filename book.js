@@ -563,9 +563,13 @@ async function handleCheckoutFormSubmit(event) {
     let bookingId;
     if (paymentSettings.mode === "razorpay") {
       const influencerId = localStorage.getItem("influencer_id");
+      const { data: sessionData } = await supabaseClient.auth.getSession();
       const holdResponse = await fetch("/api/create-payment-hold", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${sessionData.session?.access_token || ""}`
+        },
         body: JSON.stringify({
           p_room_id: room.id,
           p_customer_name: guestName || profile.name || "Customer",

@@ -1177,7 +1177,7 @@ document.querySelector("#saveProfileBtn").addEventListener("click", async event 
     if (error) throw error;
     alert("Profile saved.");
   } catch (error) {
-    alert(`Profile save failed: ${error.message}`);
+    alert("Profile could not be saved. Please try again or contact support.");
   } finally {
     button.disabled = false;
     button.textContent = "Save Profile";

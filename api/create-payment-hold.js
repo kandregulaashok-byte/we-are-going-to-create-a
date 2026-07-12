@@ -17,6 +17,18 @@ async function supabaseRpc(name, body) {
   return data;
 }
 
+async function authenticatedUser(req) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!url || !key) return null;
+  if (!token) return null;
+  const response = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: key, authorization: `Bearer ${token}` }
+  });
+  return response.ok ? response.json() : null;
+}
+
 async function razorpayOrder(amount, receipt) {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -54,7 +66,9 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (rateLimited(req)) return res.status(429).json({ error: "Too many payment attempts. Please wait a minute and try again." });
   try {
-    const hold = await supabaseRpc("create_booking_hold_safe", req.body || {});
+    const user = await authenticatedUser(req);
+    if (!user?.email) return res.status(401).json({ error: "Please login again before payment." });
+    const hold = await supabaseRpc("create_booking_hold_safe", { ...(req.body || {}), p_customer_email: user.email });
     const order = await razorpayOrder(hold.payable_amount, hold.hold_id);
     const update = await fetch(`${process.env.SUPABASE_URL}/rest/v1/booking_holds?id=eq.${hold.hold_id}`, {
       method: "PATCH",
@@ -76,6 +90,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Payment hold failed:", error.message);
-    res.status(400).json({ error: error.message || "Payment hold failed. Please check availability and try again." });
+    res.status(400).json({ error: "Payment could not be started. Please check availability and try again." });
   }
 };
