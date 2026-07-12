@@ -538,14 +538,22 @@ let editingOwnerId = null;
 
 async function loadOwners() {
   if (!supabaseClient) return;
-  const { data, error } = await supabaseClient
+  let { data, error } = await supabaseClient
     .from("hotel_owners_with_auth")
     .select("*")
     .eq("active", true)
     .order("created_at", { ascending: false });
   if (error) {
-    console.error("Failed to load owners:", error.message);
-    return;
+    ({ data, error } = await supabaseClient
+      .from("hotel_owners")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: false }));
+    if (error) {
+      adminOwnerList.innerHTML = `Could not load owners: ${escapeHtml(error.message)}`;
+      notifyAdmin("Could not load registered owners.", true);
+      return;
+    }
   }
   hotelOwners = data || [];
   renderOwners();
@@ -746,21 +754,47 @@ async function loadCustomers() {
 
 function renderCustomers() {
   if (!adminCustomerList) return;
-  adminCustomerList.innerHTML = allCustomers.length ? allCustomers.map(customer => {
-    const booked = allBookings.filter(b => b.customer_email && b.customer_email === customer.email).length;
-    return `
-      <article class="sales-item">
-        <div>
-          <strong>${escapeHtml(customer.name || "Guest")}</strong>
-          <p>${escapeHtml(customer.email || "No email")} &middot; ${escapeHtml(customer.phone || "No phone")}</p>
-        </div>
-        <div style="text-align:right;">
-          <strong>${booked} booking(s)</strong>
-          <p>${escapeHtml(customer.last_seen_at || "")}</p>
-        </div>
-      </article>
-    `;
-  }).join("") : "No logged-in users yet.";
+  const bookingCustomers = allBookings
+    .filter(b => b.customer_email || b.customer_phone)
+    .reduce((map, b) => {
+      const key = b.customer_email || b.customer_phone;
+      const row = map.get(key) || { name: b.customer_name, email: b.customer_email, phone: b.customer_phone, bookings: 0, amount: 0, last: "" };
+      row.bookings += 1;
+      row.amount += Number(b.total_price || 0);
+      row.last = !row.last || b.created_at > row.last ? b.created_at : row.last;
+      map.set(key, row);
+      return map;
+    }, new Map());
+  adminCustomerList.innerHTML = `
+    <h4>Visitors</h4>
+    ${adminTable(["Name", "Email", "Phone", "Last seen"], allCustomers.map(c => [
+      c.name || "Guest",
+      c.email || "No email",
+      c.phone || "No phone",
+      c.last_seen_at ? new Date(c.last_seen_at).toLocaleString("en-IN") : ""
+    ]), "No logged-in visitors yet.")}
+    <h4>Customers with bookings</h4>
+    ${adminTable(["Name", "Email", "Phone", "Bookings", "Total paid", "Last booking"], [...bookingCustomers.values()].map(c => [
+      c.name || "Guest",
+      c.email || "No email",
+      c.phone || "No phone",
+      c.bookings,
+      `Rs.${c.amount.toLocaleString("en-IN")}`,
+      c.last ? new Date(c.last).toLocaleString("en-IN") : ""
+    ]), "No booking customers yet.")}
+  `;
+}
+
+function adminTable(headers, rows, emptyText) {
+  if (!rows.length) return `<p class="muted-line">${escapeHtml(emptyText)}</p>`;
+  return `
+    <div class="admin-table-wrap">
+      <table class="admin-data-table">
+        <thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead>
+        <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+    </div>
+  `;
 }
 
 function renderSales() {
