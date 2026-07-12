@@ -1374,7 +1374,9 @@ bookingForm.addEventListener("submit", async event => {
             await attachPaymentScreenshot(bookingId, screenshotUrl);
             bookingDetails.paymentScreenshotUrl = screenshotUrl;
           } catch (uploadError) {
-            await supabaseClient?.from("bookings").update({ status: "cancelled" }).eq("id", bookingId).catch(() => {});
+            try {
+              await supabaseClient?.from("bookings").update({ status: "cancelled" }).eq("id", bookingId);
+            } catch (_) {}
             throw uploadError;
           }
         }
