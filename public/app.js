@@ -860,11 +860,22 @@ function restoreVisibleState() {
   } else if (!appHidden && !document.querySelector(".screen.active")) {
     showScreen(location.hash || "#home");
   }
+  if (!app.classList.contains("hidden")) {
+    const active = document.querySelector(".screen.active") || document.querySelector("#home");
+    const rect = active.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > innerHeight) active.scrollIntoView({ block: "start" });
+    if (modal.open && selectedRoomId && rooms.some(room => room.id === selectedRoomId)) {
+      modal.close();
+      openBooking(selectedRoomId);
+    }
+  }
 }
 
 function handleTabReturn() {
   recoverFromUpiReturn();
   restoreVisibleState();
+  setTimeout(restoreVisibleState, 80);
+  setTimeout(restoreVisibleState, 400);
 }
 
 async function captureWaitlist(room) {
