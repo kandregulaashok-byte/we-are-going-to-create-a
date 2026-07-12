@@ -900,6 +900,11 @@ function restoreVisibleState() {
     window.scrollTo(0, 0);
     document.scrollingElement?.scrollTo(0, 0);
   }
+  const submitBtn = bookingForm?.querySelector('button[type="submit"]');
+  if (submitBtn?.disabled && /confirming|submitting/i.test(submitBtn.textContent || "")) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Pay & Confirm";
+  }
 }
 
 function handleTabReturn() {
@@ -914,6 +919,15 @@ function handleTabReturn() {
 
 function rememberVisibleState() {
   if (selectedRoomId) localStorage.setItem("stayPendingRoomId", selectedRoomId);
+  closeOpenDialogs();
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === "hidden") {
+    rememberVisibleState();
+    return;
+  }
+  handleTabReturn();
 }
 
 async function captureWaitlist(room) {
@@ -1616,7 +1630,7 @@ window.addEventListener("focus", handleTabReturn);
 window.addEventListener("pageshow", handleTabReturn);
 window.addEventListener("pagehide", rememberVisibleState);
 window.addEventListener("blur", rememberVisibleState);
-document.addEventListener("visibilitychange", handleTabReturn);
+document.addEventListener("visibilitychange", handleVisibilityChange);
 window.addEventListener("DOMContentLoaded", async () => {
   capturePendingBookingParam();
   const consumedHashSession = await consumeAuthHash();
