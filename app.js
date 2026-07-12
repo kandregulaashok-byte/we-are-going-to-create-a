@@ -844,6 +844,29 @@ function recoverFromUpiReturn() {
   openPendingBookingIfReady();
 }
 
+function restoreVisibleState() {
+  if (document.visibilityState === "hidden") return;
+  const appHidden = app.classList.contains("hidden");
+  const landingHidden = landing.classList.contains("hidden");
+  if (appHidden && landingHidden) {
+    const hasCustomerState = localStorage.getItem("stayAuthUserKey") || getStore("stayProfile", {})?.email;
+    if (hasCustomerState) {
+      app.classList.remove("hidden");
+      showScreen(location.hash || "#home");
+    } else {
+      landing.classList.remove("hidden");
+      setLandingVideo();
+    }
+  } else if (!appHidden && !document.querySelector(".screen.active")) {
+    showScreen(location.hash || "#home");
+  }
+}
+
+function handleTabReturn() {
+  recoverFromUpiReturn();
+  restoreVisibleState();
+}
+
 async function captureWaitlist(room) {
   const phone = prompt("Rooms are full for this date. Share your mobile number; our team will call within 15 minutes and check nearby local rooms.");
   if (!phone) return;
@@ -1538,9 +1561,9 @@ if (searchQueryForm) {
 }
 window.addEventListener("hashchange", () => showScreen(location.hash || "#home"));
 window.addEventListener("resize", setLandingVideo);
-window.addEventListener("focus", recoverFromUpiReturn);
-window.addEventListener("pageshow", recoverFromUpiReturn);
-document.addEventListener("visibilitychange", recoverFromUpiReturn);
+window.addEventListener("focus", handleTabReturn);
+window.addEventListener("pageshow", handleTabReturn);
+document.addEventListener("visibilitychange", handleTabReturn);
 window.addEventListener("DOMContentLoaded", async () => {
   capturePendingBookingParam();
   const consumedHashSession = await consumeAuthHash();
