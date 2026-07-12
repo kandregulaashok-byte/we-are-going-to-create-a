@@ -535,25 +535,6 @@ function renderSummary() {
   bookingSummary.innerHTML = "";
 }
 
-function defaultTripDetails() {
-  const today = getLocalDateString();
-  return {
-    from: today,
-    to: getNextDateString(today),
-    adults: 2,
-    children: 0,
-    rooms: 1
-  };
-}
-
-function validateTripValues({ from, to, adults, children }) {
-  if (!from || !to) return "Please select check-in and check-out dates.";
-  if (to <= from) return "Check-out date must be after check-in date.";
-  if (!positiveWholeNumber(adults) || Number(adults) < 1) return "Adults must be a whole number of at least 1.";
-  if (!positiveWholeNumber(children) || Number(children) < 0) return "Kids must be a whole number of 0 or more.";
-  return "";
-}
-
 function applyTripDetails({ from, to, adults, children }) {
   const error = validateTripValues({ from, to, adults, children });
   if (error) {
@@ -879,7 +860,7 @@ async function captureWaitlist(room) {
     p_check_in: bookingDetails?.from || getLocalDateString(),
     p_check_out: bookingDetails?.to || getNextDateString(bookingDetails?.from || getLocalDateString())
   });
-  alert(error ? error.message : "Thanks. Our team will contact you within 15 minutes.");
+  alert(error ? "Could not save your request. Please contact support on WhatsApp." : "Thanks. Our team will contact you within 15 minutes.");
 }
 
 async function saveTravelInterestLead(room, details) {
@@ -1098,7 +1079,7 @@ adminRoomForm?.addEventListener("submit", async event => {
       image_urls: roomInput.images
     });
     if (error) {
-      alert(error.message);
+      alert("Room could not be saved. Please try again from admin.");
       return;
     }
     await loadOwnerRooms();
@@ -1153,7 +1134,7 @@ async function uploadRoomImages(files) {
 async function deleteOwnerRoom(id) {
   if (supabaseClient) {
     const { error } = await supabaseClient.from("rooms").update({ active: false }).eq("id", id);
-    if (error) alert(error.message);
+    if (error) alert("Room could not be deleted. Please try again from admin.");
     await loadOwnerRooms();
   } else {
     ownerRooms = ownerRooms.filter(item => item.id !== id);
@@ -1253,7 +1234,7 @@ loginBtn.addEventListener("click", async () => {
   });
   if (error) {
     loginBtn.disabled = false;
-    alert(error.message || "Google login is not available yet.");
+    alert("Google login could not start. Please refresh and try again.");
   }
 });
 
@@ -1299,7 +1280,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   const authError = new URLSearchParams(location.search).get("error_description");
   if (authError) {
-    alert(decodeURIComponent(authError).replace(/\+/g, " "));
+    alert("Google login could not finish. Please try again.");
   }
   if (!consumedHashSession) resumeSession(false);
   setTimeout(() => resumeSession(false), 500);

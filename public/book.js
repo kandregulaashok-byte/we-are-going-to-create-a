@@ -637,7 +637,7 @@ async function signInWithGoogle() {
   });
   if (error) {
     loginBtn.disabled = false;
-    alert(error.message || "Google login is not available yet.");
+    alert("Google login could not start. Please refresh and try again.");
   }
 }
 
