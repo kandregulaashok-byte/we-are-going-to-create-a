@@ -486,6 +486,10 @@ function updatePricingUI() {
   const total = roomTotal + firecampTotal;
   const paymentPercent = Number(paymentInput.value || 20);
   const payNow = Math.round(total * paymentPercent / 100);
+  const option20 = paymentInput.querySelector('option[value="20"]');
+  const option100 = paymentInput.querySelector('option[value="100"]');
+  if (option20) option20.textContent = `Pay 20% advance - Rs.${Math.round(total * 0.2).toLocaleString("en-IN")}`;
+  if (option100) option100.textContent = `Pay 100% now - Rs.${total.toLocaleString("en-IN")}`;
   
   const manualMode = paymentSettings.mode !== "razorpay" && paymentSettings.mode !== "mock";
   manualPaymentBox?.classList.toggle("hidden", !manualMode);
