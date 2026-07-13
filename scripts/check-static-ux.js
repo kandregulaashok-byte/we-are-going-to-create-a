@@ -18,6 +18,7 @@ const releasePaymentHold = read("api/release-payment-hold.js");
 const paymentStatus = read("api/payment-status.js");
 const paymentSettings = read("api/payment-settings.js");
 const manualBooking = read("api/manual-booking.js");
+const logClientError = read("api/log-client-error.js");
 const seo = read("scripts/generate-seo-pages.js");
 const vercel = read("vercel.json");
 
@@ -60,6 +61,7 @@ if (razorpayWebhook.includes("createBookingFromPaidHold") || razorpayWebhook.inc
 if (!book.includes("/api/release-payment-hold") || !book.includes("Payment failed. Rooms were released.")) fail("Failed Razorpay payments must release held rooms.");
 if (!releasePaymentHold.includes("status=eq.held") || !releasePaymentHold.includes('status: "expired"')) fail("Release hold API must only expire held rooms.");
 if (!releasePaymentHold.includes("!response.ok") || !releasePaymentHold.includes("return=representation")) fail("Release hold API must verify the database update.");
+if (!logClientError.includes("rateLimited") || !logClientError.includes("recent.length > 20")) fail("Client error logging must be rate limited.");
 if (!seo.includes('decoding="async"')) fail("SEO hotel images should decode asynchronously.");
 if (!vercel.includes('"X-Frame-Options"') || !vercel.includes('"DENY"')) fail("Clickjacking header missing.");
 
