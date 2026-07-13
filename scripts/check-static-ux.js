@@ -39,6 +39,7 @@ const visibleRuntime = app + book + admin + owner + read("admin-settings.js") + 
 ].forEach(file => execFileSync(process.execPath, ["--check", file], { stdio: "pipe" }));
 
 if ((index.match(/terms-of-service/g) || []).length !== 1) fail("Terms link should appear once on home/profile.");
+if (!fs.existsSync("favicon.ico") || !fs.existsSync("public/favicon.ico")) fail("favicon.ico fallback must exist for browsers that request it.");
 if ((index.match(/cancellation-policy/g) || []).length !== 1) fail("Cancellation link should appear once on home/profile.");
 if (!index.includes("support-list")) fail("Support should use formatted rows, not one paragraph.");
 if (!index.includes("app-room-ui.js")) fail("Room UI helper must load before app.js.");
@@ -55,6 +56,7 @@ if (!owner.includes("ownerFriendlyError") || !owner.includes("vercel|github|envi
 if (/alert\([^)]*error\.message|innerHTML\s*=[^;]*error\.message/.test(admin + owner)) fail("Admin/owner UI must not show raw backend errors.");
 if (/Backend (connected|not connected|is not connected)/.test(visibleRuntime)) fail("Runtime UI must not mention backend infrastructure.");
 if (/javascript:/i.test(index + app + book + read("book.html"))) fail("Customer UI must not use javascript: pseudo-links.");
+if (/type="number"/.test(index + read("book.html") + read("admin.html") + admin)) fail("Use text inputs with inputmode numeric instead of mobile-hostile number inputs.");
 if (/notifyAdmin\(`[^`]*\$\{error\.message\}/.test(read("admin-settings.js"))) fail("Admin settings must not show raw backend errors.");
 if (!admin.includes('.from("booking_occupancy")') || !admin.includes("allOccupancy")) fail("Admin availability must use shared occupancy, including live payment holds.");
 if (!owner.includes('.from("booking_occupancy")') || !owner.includes("allOccupancy")) fail("Owner availability must use shared occupancy, including live payment holds.");

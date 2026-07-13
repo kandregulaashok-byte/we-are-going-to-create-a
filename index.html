@@ -154,11 +154,11 @@
         </label>
         <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: bold; color: var(--text);">
           Adults
-          <input id="searchAdults" type="number" min="1" value="2" required style="height: 38px; border-radius: 6px; border: 1px solid var(--border); padding: 0 8px; font-size: 14px;">
+          <input id="searchAdults" type="text" inputmode="numeric" pattern="[0-9]*" value="2" required style="height: 38px; border-radius: 6px; border: 1px solid var(--border); padding: 0 8px; font-size: 14px;">
         </label>
         <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: bold; color: var(--text);">
           Kids
-          <input id="searchKids" type="number" min="0" value="0" required style="height: 38px; border-radius: 6px; border: 1px solid var(--border); padding: 0 8px; font-size: 14px;">
+          <input id="searchKids" type="text" inputmode="numeric" pattern="[0-9]*" value="0" required style="height: 38px; border-radius: 6px; border: 1px solid var(--border); padding: 0 8px; font-size: 14px;">
         </label>
       </div>
       <button class="primary-btn" type="submit" style="width: 100%; height: 42px; background: var(--accent); color: #fff; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s;">Search Stays</button>

@@ -372,7 +372,7 @@ function renderImageOrderList() {
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 12px; color: #888;">Order:</span>
-        <input type="number" class="image-order-input" data-index="${index}" min="1" value="${img.order || ""}" placeholder="${index + 1}" style="width: 60px; height: 30px; background: #2a2a2a; border: 1px solid var(--border); color: #fff; text-align: center; border-radius: 4px;">
+        <input type="text" inputmode="numeric" pattern="[0-9]*" class="image-order-input" data-index="${index}" value="${img.order || ""}" placeholder="${index + 1}" style="width: 60px; height: 30px; background: #2a2a2a; border: 1px solid var(--border); color: #fff; text-align: center; border-radius: 4px;">
         <button type="button" class="ghost-btn remove-img-btn" data-index="${index}" style="color: var(--danger); border-color: rgba(214,41,118,0.2); padding: 4px 8px; font-size: 11px;">Remove</button>
       </div>
     </div>

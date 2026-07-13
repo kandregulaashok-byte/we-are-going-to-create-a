@@ -64,12 +64,12 @@
             <div class="form-grid">
               <label>Room display name <input id="adminRoomName" required placeholder="Pushpa Suite"></label>
               <label>Room type <input id="adminRoomType" required placeholder="Deluxe Forest View"></label>
-              <label>Available rooms <input id="adminAvailableRooms" type="number" min="0" value="1" required></label>
-              <label>Max adults in room <input id="adminMaxAdults" type="number" min="1" value="2" required></label>
-              <label>Weekday price (Website) <input id="adminWeekdayPrice" type="number" min="0" value="2499" required></label>
-              <label>Weekday price (Pay Owner) <input id="adminWeekdayOwnerPrice" type="number" min="0" value="2000" required></label>
-              <label>Weekend price (Website) <input id="adminWeekendPrice" type="number" min="0" value="2999" required></label>
-              <label>Weekend price (Pay Owner) <input id="adminWeekendOwnerPrice" type="number" min="0" value="2500" required></label>
+              <label>Available rooms <input id="adminAvailableRooms" type="text" inputmode="numeric" pattern="[0-9]*" value="1" required></label>
+              <label>Max adults in room <input id="adminMaxAdults" type="text" inputmode="numeric" pattern="[0-9]*" value="2" required></label>
+              <label>Weekday price (Website) <input id="adminWeekdayPrice" type="text" inputmode="numeric" pattern="[0-9]*" value="2499" required></label>
+              <label>Weekday price (Pay Owner) <input id="adminWeekdayOwnerPrice" type="text" inputmode="numeric" pattern="[0-9]*" value="2000" required></label>
+              <label>Weekend price (Website) <input id="adminWeekendPrice" type="text" inputmode="numeric" pattern="[0-9]*" value="2999" required></label>
+              <label>Weekend price (Pay Owner) <input id="adminWeekendOwnerPrice" type="text" inputmode="numeric" pattern="[0-9]*" value="2500" required></label>
               <label>Connected Owner
                 <select id="adminRoomOwner" required>
                   <option value="">Select hotel owner...</option>
@@ -119,7 +119,7 @@
               <input id="adminBlockTo" type="date" required>
             </label>
             <label>No. of rooms
-              <input id="adminBlockRooms" type="number" min="1" value="1" required>
+              <input id="adminBlockRooms" type="text" inputmode="numeric" pattern="[0-9]*" value="1" required>
             </label>
             <button class="primary-btn" type="submit">Block</button>
             <p id="adminBlockHint" class="muted-line"></p>
@@ -209,10 +209,10 @@
           <form id="adminPricingForm" class="admin-form">
             <div class="form-grid">
               <label>80% booked price increase
-                <input id="pricing80Surcharge" type="number" min="0" value="200" required>
+                <input id="pricing80Surcharge" type="text" inputmode="numeric" pattern="[0-9]*" value="200" required>
               </label>
               <label>90% booked price increase
-                <input id="pricing90Surcharge" type="number" min="0" value="300" required>
+                <input id="pricing90Surcharge" type="text" inputmode="numeric" pattern="[0-9]*" value="300" required>
               </label>
             </div>
             <button class="primary-btn" type="submit">Save Pricing</button>
