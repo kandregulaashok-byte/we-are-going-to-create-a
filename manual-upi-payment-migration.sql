@@ -2,11 +2,11 @@ alter table public.bookings add column if not exists payment_screenshot_url text
 alter table public.bookings add column if not exists manual_payment_status text not null default 'not_required';
 
 update public.site_settings
-set value = coalesce(value, '{}'::jsonb) || '{"mode": "manual"}'::jsonb
+set value = coalesce(value, '{}'::jsonb) || '{"mode": "razorpay"}'::jsonb
 where key = 'payment' and coalesce(value ->> 'mode', '') in ('', 'mock');
 
 insert into public.site_settings (key, value)
-values ('payment', '{"mode": "manual", "upiId": ""}'::jsonb)
+values ('payment', '{"mode": "razorpay", "upiId": ""}'::jsonb)
 on conflict (key) do nothing;
 
 create or replace function public.attach_booking_payment_screenshot(p_booking_id uuid, p_screenshot_url text)
@@ -75,7 +75,7 @@ set search_path = public
 as $$
   select coalesce(
     (select value from public.site_settings where key = 'payment'),
-    '{"mode": "manual", "upiId": ""}'::jsonb
+    '{"mode": "razorpay", "upiId": ""}'::jsonb
   );
 $$;
 

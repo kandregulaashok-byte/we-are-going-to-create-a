@@ -117,7 +117,7 @@ values ('dynamic_pricing', '{"occupancy80Surcharge": 200, "occupancy90Surcharge"
 on conflict (key) do nothing;
 
 insert into public.site_settings (key, value)
-values ('payment', '{"mode": "manual", "upiId": ""}'::jsonb)
+values ('payment', '{"mode": "razorpay", "upiId": ""}'::jsonb)
 on conflict (key) do nothing;
 
 create table if not exists public.profiles (
@@ -922,7 +922,7 @@ set search_path = public
 as $$
   select coalesce(
     (select value from public.site_settings where key = 'payment'),
-    '{"mode": "manual", "upiId": ""}'::jsonb
+    '{"mode": "razorpay", "upiId": ""}'::jsonb
   );
 $$;
 

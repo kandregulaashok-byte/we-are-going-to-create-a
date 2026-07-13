@@ -1,5 +1,6 @@
 const fs = require("fs");
 
+const read = file => fs.readFileSync(file, "utf8").toLowerCase();
 const files = [
   "security-hardening-rls-migration.sql",
   "security-hardening-booking-rpc-migration.sql",
@@ -7,8 +8,9 @@ const files = [
   "payment-confirm-expired-hold-migration.sql",
   "owner-release-offline-only-migration.sql",
   "booking-guest-count-validation-migration.sql",
+  "payment-default-razorpay-migration.sql",
   "supabase-schema.sql"
-].map(file => fs.readFileSync(file, "utf8").toLowerCase()).join("\n");
+].map(read).join("\n");
 
 const required = [
   "enable row level security",
@@ -25,6 +27,10 @@ const required = [
 
 for (const text of required) {
   if (!files.includes(text)) throw new Error(`SQL hardening missing: ${text}`);
+}
+
+for (const file of ["supabase-schema.sql", "payment-settings-rpc-migration.sql", "manual-upi-payment-migration.sql", "payment-default-razorpay-migration.sql"]) {
+  if (read(file).includes('"mode": "manual"')) throw new Error(`${file} must not default payment mode to manual.`);
 }
 
 console.log("sql hardening check passed");
