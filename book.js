@@ -22,6 +22,7 @@ const bookingForm = document.getElementById("bookingForm");
 const bookingRoomSummary = document.getElementById("bookingRoomSummary");
 const billSummary = document.getElementById("billSummary");
 const submitBtn = document.getElementById("submitBtn");
+const finalCapacityWarning = document.getElementById("finalCapacityWarning");
 
 const bookingName = document.getElementById("bookingName");
 const bookingPhone = document.getElementById("bookingPhone");
@@ -471,6 +472,13 @@ function updatePricingUI() {
   submitBtn.disabled = !fitted.maxRooms;
   
   const pricing = priceForDates(room, fitted);
+  const capacityWarningText = fitted.partialFit
+    ? `Booking ${fitted.maxAdults} adult(s) here. Please book the remaining ${fitted.requestedAdults - fitted.maxAdults} adult(s) in another hotel.`
+    : "";
+  if (finalCapacityWarning) {
+    finalCapacityWarning.textContent = capacityWarningText;
+    finalCapacityWarning.classList.toggle("hidden", !capacityWarningText);
+  }
   const selectedRoomsCount = Number(fitted.rooms || 1);
   const roomTotal = pricing.total;
   const firecampAmount = firecampPrice(selectedRoomsCount);
@@ -505,7 +513,7 @@ function updatePricingUI() {
     <p style="margin: 4px 0;">${pricing.nights} night(s) x ${selectedRoomsCount} room(s): Rs.${roomTotal.toLocaleString("en-IN")}</p>
     ${firecampTotal ? `<p style="margin: 4px 0;">Firecamp add-on: Rs.${firecampTotal.toLocaleString("en-IN")}</p>` : ""}
     <p style="margin: 4px 0; color: var(--muted); font-size: 13px;">Adults: ${fitted.adults || 1} &middot; Kids: ${fitted.children || 0}</p>
-    ${fitted.partialFit ? `<p class="capacity-warning">Booking ${fitted.maxAdults} adult(s) here. Please book the remaining ${fitted.requestedAdults - fitted.maxAdults} adult(s) in another hotel.</p>` : ""}
+    ${capacityWarningText ? `<p class="capacity-warning">${capacityWarningText}</p>` : ""}
     <div style="border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px; display: grid; gap: 4px;">
       <b style="font-size: 16px;">Total: Rs.${total.toLocaleString("en-IN")}</b>
       <b style="font-size: 18px; color: var(--accent);">Pay now (${paymentPercent}%): Rs.${payNow.toLocaleString("en-IN")}</b>

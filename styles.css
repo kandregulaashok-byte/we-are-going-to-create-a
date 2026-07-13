@@ -806,6 +806,15 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 }
 .bill-summary p { margin: 0; color: var(--muted); }
 .capacity-warning { color: var(--danger) !important; font-weight: 800; }
+.final-capacity-warning {
+  margin: 0 auto 16px;
+  max-width: 420px;
+  padding: 12px;
+  border: 1px solid rgba(214, 41, 118, .24);
+  border-radius: 8px;
+  background: rgba(214, 41, 118, .06);
+  text-align: left;
+}
 .manual-payment-box {
   display: grid;
   gap: 8px;
