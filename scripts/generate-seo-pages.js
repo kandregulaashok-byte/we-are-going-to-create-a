@@ -112,7 +112,7 @@ function hotelCard(room) {
 
 function writeHotelsIndex(rooms) {
   const body = `<main class="policy-shell seo-shell">
-    <a class="wordmark" href="/" aria-label="Stay@Maredumilli home">Stay@Maredumilli</a>
+    <a class="wordmark" href="/" aria-label="Stay@Maredumilli home"><img class="brand-logo" src="/brand-logo.png" alt="" aria-hidden="true"><span>Stay@Maredumilli</span></a>
     <section class="policy-content">
       <h1>Maredumilli Hotels and Nature Stays</h1>
       <p>Browse room listings with real photos, amenities, and prices around Maredumilli.</p>
@@ -140,7 +140,7 @@ function writeHotel(room) {
   const images = (room.image_urls || []).filter(Boolean);
   const body = `<main class="hotel-detail-page" data-room-id="${escapeHtml(room.id)}">
     <nav class="hotel-detail-nav">
-      <a class="wordmark" href="/" aria-label="Stay@Maredumilli home">Stay@Maredumilli</a>
+      <a class="wordmark" href="/" aria-label="Stay@Maredumilli home"><img class="brand-logo" src="/brand-logo.png" alt="" aria-hidden="true"><span>Stay@Maredumilli</span></a>
       <a class="ghost-btn" href="/hotels">All hotels</a>
     </nav>
     <section class="hotel-detail-hero">
