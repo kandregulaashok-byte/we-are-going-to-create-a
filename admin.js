@@ -591,7 +591,7 @@ function renderOwners() {
 function populateOwnerDropdown() {
   if (!adminRoomOwner) return;
   const selected = adminRoomOwner.value;
-  adminRoomOwner.innerHTML = `<option value="">Select hotel owner...</option>` +
+  adminRoomOwner.innerHTML = `<option value="">No owner connected</option>` +
     hotelOwners.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.hotel_name || o.owner_name)} (${escapeHtml(o.owner_name)})</option>`).join("");
   adminRoomOwner.value = selected;
 }
@@ -611,7 +611,6 @@ if (adminOwnerForm) {
 
     // Disable register button
     const submitBtn = adminOwnerForm.querySelector("button[type='submit']");
-    const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
     submitBtn.textContent = editingOwnerId ? "Updating..." : "Registering...";
 
@@ -643,7 +642,7 @@ if (adminOwnerForm) {
           throw new Error("Failed to update owner profile.");
         }
 
-        alert(`Successfully updated owner credentials and profile for ${hotelName}!`);
+        notifyAdmin(`Updated owner for ${hotelName}.`);
         editingOwnerId = null;
       } else {
         // REGISTER MODE: Call RPC to register owner programmatically with confirmed email
@@ -661,7 +660,7 @@ if (adminOwnerForm) {
           throw new Error("Owner registration failed.");
         }
 
-        alert(`Successfully registered ${ownerName} for ${hotelName}!`);
+        notifyAdmin(`Registered ${ownerName} for ${hotelName}.`);
       }
 
       // Reset form and UI fields
@@ -675,12 +674,15 @@ if (adminOwnerForm) {
       notifyAdmin(err.message, true);
     } finally {
       submitBtn.disabled = false;
-      if (!editingOwnerId && submitBtn) {
-        submitBtn.textContent = "Register Owner";
-      }
+      submitBtn.textContent = editingOwnerId ? "Update Owner" : "Register Owner";
     }
   });
 }
+
+adminOwnerForm?.addEventListener("invalid", event => {
+  notifyAdmin("Please fill all required owner details before saving.", true);
+  event.target.focus();
+}, true);
 
 // Handle owner list actions (Delete or Edit)
 if (adminOwnerList) {

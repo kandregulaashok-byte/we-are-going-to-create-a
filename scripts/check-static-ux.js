@@ -68,6 +68,10 @@ if (!/supabase\|vercel\|github\|environment\|row-level security\|permission deni
 if (!read("admin-ui.js").includes("cleanAdminMessage") || !read("admin-ui.js").includes("vercel|github|environment")) fail("Admin status must mask raw backend permission errors.");
 if (!owner.includes("ownerFriendlyError") || !owner.includes("vercel|github|environment")) fail("Owner status must mask raw backend permission errors.");
 if (/alert\([^)]*error\.message|innerHTML\s*=[^;]*error\.message/.test(admin + owner)) fail("Admin/owner UI must not show raw backend errors.");
+if (admin.includes("Successfully registered") || admin.includes("Successfully updated owner")) fail("Admin owner save must use inline status, not blocking alerts.");
+if (!admin.includes('submitBtn.textContent = editingOwnerId ? "Update Owner" : "Register Owner"')) fail("Owner save button must reset after success or failure.");
+if (!admin.includes("Please fill all required room details") || !admin.includes("Please fill all required owner details")) fail("Admin forms must show validation feedback.");
+if (read("admin.html").includes('id="adminRoomOwner" required')) fail("Adding a hotel must not require selecting an owner.");
 if (/Backend (connected|not connected|is not connected)/.test(visibleRuntime)) fail("Runtime UI must not mention backend infrastructure.");
 if (/javascript:/i.test(index + app + book + read("book.html"))) fail("Customer UI must not use javascript: pseudo-links.");
 if (/type="number"/.test(index + read("book.html") + read("admin.html") + admin)) fail("Use text inputs with inputmode numeric instead of mobile-hostile number inputs.");
