@@ -501,7 +501,7 @@ function updatePricingUI() {
   const formDetails = checkoutDetailsFromForm();
   const fitted = fitDetailsToAvailability(room, formDetails);
   
-  roomsInput.value = fitted.rooms || 1;
+  if (document.activeElement !== roomsInput) roomsInput.value = fitted.rooms || 1;
   roomsInput.max = fitted.maxRooms || "";
   submitBtn.disabled = !fitted.maxRooms;
   

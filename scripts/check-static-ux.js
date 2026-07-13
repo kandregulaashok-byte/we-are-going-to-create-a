@@ -37,6 +37,7 @@ if (/alert\([^)]*error\.message|innerHTML\s*=[^;]*error\.message/.test(admin + o
 if (owner.includes("'Cancel Booking'") || !owner.includes("Customer bookings cannot be released")) fail("Owner panel must not allow releasing paid customer bookings.");
 if (!book.includes('loading="lazy" decoding="async"')) fail("Booking room image should not block checkout rendering.");
 if (book.includes("adultsInput.value = fitted.adults")) fail("Adult input must not be rewritten while typing.");
+if (!book.includes("document.activeElement !== roomsInput")) fail("Room input must not be rewritten while typing.");
 if (!book.includes('e.target.id === "adultsInput" && e.type === "change"')) fail("Adult room auto-fit should run on commit, not every keystroke.");
 if (!book.includes("const tripError = validateTripValues(formDetails)")) fail("Checkout must validate trip fields before payment.");
 if (!book.includes('localStorage.setItem("stayProfile"')) fail("Booking contact details should persist to profile.");
