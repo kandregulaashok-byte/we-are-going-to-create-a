@@ -509,7 +509,10 @@ function openQuickModal(roomId, dateStr, remaining) {
     if (modalTitle) modalTitle.textContent = "Block Room Offline";
     if (modalBlockSection) modalBlockSection.classList.remove("hidden");
     if (modalReleaseSection) modalReleaseSection.classList.add("hidden");
-    if (modalSubmitRelease) modalSubmitRelease.classList.remove("hidden");
+    if (modalSubmitRelease) {
+      modalSubmitRelease.dataset.bookingId = "";
+      modalSubmitRelease.classList.add("hidden");
+    }
 
     if (modalGuestName) modalGuestName.value = "";
     if (modalGuestPhone) modalGuestPhone.value = "";

@@ -35,6 +35,7 @@ if (!/supabase\|row-level security\|permission denied\|violates/.test(shared)) f
 if (!read("admin-ui.js").includes("cleanAdminMessage") || !read("admin-ui.js").includes("permission denied")) fail("Admin status must mask raw backend permission errors.");
 if (/alert\([^)]*error\.message|innerHTML\s*=[^;]*error\.message/.test(admin + owner)) fail("Admin/owner UI must not show raw backend errors.");
 if (owner.includes("'Cancel Booking'") || !owner.includes("Customer bookings cannot be released")) fail("Owner panel must not allow releasing paid customer bookings.");
+if (!owner.includes('modalSubmitRelease.dataset.bookingId = ""') || !owner.includes("modalSubmitRelease.classList.add(\"hidden\")")) fail("Owner block modal must hide release action when creating a new block.");
 if (!book.includes('loading="lazy" decoding="async"')) fail("Booking room image should not block checkout rendering.");
 if (book.includes("adultsInput.value = fitted.adults")) fail("Adult input must not be rewritten while typing.");
 if (!book.includes("document.activeElement !== roomsInput")) fail("Room input must not be rewritten while typing.");
