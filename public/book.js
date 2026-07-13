@@ -848,7 +848,7 @@ async function handleUserSession(session) {
   const toParam = params.get("to") || localSavedDetails.to || getLocalDateString(tomorrow);
   const adultsParam = Number(params.get("adults") || localSavedDetails.adults || 2);
   const kidsParam = Number(params.get("children") || localSavedDetails.children || 0);
-  const roomsParam = Number(params.get("rooms") || localSavedDetails.rooms || 1);
+  const roomsParam = minRoomsNeededForAdults(room, adultsParam);
   const paymentParam = params.get("payment") || localSavedDetails.payment || "20";
   const firecampParam = params.get("firecamp") === "true" || Boolean(localSavedDetails.firecamp);
   
