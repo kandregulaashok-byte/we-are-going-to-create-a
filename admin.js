@@ -29,6 +29,7 @@ const adminLogoutBtn = document.querySelector("#adminLogoutBtn");
 
 const adminRoomOwner = document.querySelector("#adminRoomOwner");
 const adminOwnerForm = document.querySelector("#adminOwnerForm");
+const cancelOwnerFormBtn = document.querySelector("#cancelOwnerFormBtn");
 const adminOwnerList = document.querySelector("#adminOwnerList");
 
 const contentInventory = document.querySelector("#contentInventory");
@@ -111,6 +112,19 @@ function closeRoomForm() {
   addHotelBtn?.classList.remove("hidden");
   setSaving(false);
 }
+
+function closeOwnerForm() {
+  editingOwnerId = null;
+  adminOwnerForm?.reset();
+  if (adminOwnerPassword) adminOwnerPassword.required = true;
+  if (cancelOwnerFormBtn) cancelOwnerFormBtn.classList.add("hidden");
+  const submitBtn = adminOwnerForm?.querySelector("button[type='submit']");
+  if (submitBtn) {
+    submitBtn.textContent = "Register Owner";
+  }
+}
+
+cancelOwnerFormBtn?.addEventListener("click", closeOwnerForm);
 
 async function loadRooms() {
   if (!supabaseClient) {
@@ -217,7 +231,11 @@ adminRoomForm.addEventListener("submit", async event => {
     });
     const resolved = await Promise.all(uploadPromises);
     imageUrls = resolved
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => {
+        const orderA = typeof a.order === "number" && !isNaN(a.order) ? a.order : 999999;
+        const orderB = typeof b.order === "number" && !isNaN(b.order) ? b.order : 999999;
+        return orderA - orderB;
+      })
       .map(img => img.url);
   } catch (error) {
     setSaving(false);
@@ -394,7 +412,8 @@ function renderImageOrderList() {
   
   const updateOrderVal = (e) => {
     const idx = parseInt(e.target.dataset.index, 10);
-    currentRoomImages[idx].order = e.target.value ? parseInt(e.target.value, 10) : null;
+    const parsed = parseInt(e.target.value, 10);
+    currentRoomImages[idx].order = isNaN(parsed) ? null : parsed;
   };
   list.querySelectorAll(".image-order-input").forEach(input => {
     input.addEventListener("input", updateOrderVal);
@@ -673,11 +692,7 @@ if (adminOwnerForm) {
       }
 
       // Reset form and UI fields
-      adminOwnerForm.reset();
-      adminOwnerPassword.required = true;
-      if (submitBtn) {
-        submitBtn.textContent = "Register Owner";
-      }
+      closeOwnerForm();
       await loadOwners();
     } catch (err) {
       notifyAdmin(err.message, true);
@@ -732,6 +747,9 @@ if (adminOwnerList) {
       adminOwnerForm.scrollIntoView({ behavior: "smooth", block: "start" });
 
       editingOwnerId = owner.id;
+      if (cancelOwnerFormBtn) {
+        cancelOwnerFormBtn.classList.remove("hidden");
+      }
       const submitBtn = adminOwnerForm.querySelector("button[type='submit']");
       if (submitBtn) {
         submitBtn.textContent = "Update Owner";
@@ -921,7 +939,7 @@ async function loadUpcomingBookings() {
     .from("admin_bookings")
     .select("*")
     .eq("status", "confirmed")
-    .gte("check_in", today)
+    .gte("check_out", today)
     .lte("check_in", through)
     .order("check_in", { ascending: true })
     .order("created_at", { ascending: true });

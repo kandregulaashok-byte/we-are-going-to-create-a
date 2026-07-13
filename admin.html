@@ -151,7 +151,10 @@
               <label style="margin: 0;">Username / Email <input id="adminOwnerEmail" type="email" required placeholder="owner@valley.com" autocomplete="username"></label>
               <label style="margin: 0;">Password <input id="adminOwnerPassword" type="password" required placeholder="••••••••" autocomplete="new-password"></label>
             </div>
-            <button class="primary-btn" type="submit" style="align-self: end; height: 42px;">Register Owner</button>
+            <div style="grid-column: span 2; display: flex; gap: 12px; align-items: center; justify-content: flex-end; margin-top: 16px;">
+              <button class="primary-btn" type="submit" style="height: 42px;">Register Owner</button>
+              <button id="cancelOwnerFormBtn" class="ghost-btn hidden" type="button" style="height: 42px; border-color: rgba(255,255,255,0.15);">Cancel</button>
+            </div>
           </form>
         </section>
         <section class="panel">
