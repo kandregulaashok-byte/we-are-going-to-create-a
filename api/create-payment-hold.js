@@ -63,7 +63,12 @@ function rateLimited(req) {
 }
 
 function validPhone(value) {
-  return String(value || "").replace(/\D/g, "").length === 10;
+  return normalizePhone(value).length === 10;
+}
+
+function normalizePhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
 }
 
 module.exports = async function handler(req, res) {
@@ -75,7 +80,7 @@ module.exports = async function handler(req, res) {
     const body = req.body || {};
     if (!String(body.p_customer_name || "").trim()) return res.status(400).json({ error: "Please enter your full name." });
     if (!validPhone(body.p_customer_phone)) return res.status(400).json({ error: "Please enter a valid 10 digit mobile number." });
-    const hold = await supabaseRpc("create_booking_hold_safe", { ...body, p_customer_email: user.email });
+    const hold = await supabaseRpc("create_booking_hold_safe", { ...body, p_customer_phone: normalizePhone(body.p_customer_phone), p_customer_email: user.email });
     const order = await razorpayOrder(hold.payable_amount, hold.hold_id);
     const update = await fetch(`${process.env.SUPABASE_URL}/rest/v1/booking_holds?id=eq.${hold.hold_id}`, {
       method: "PATCH",

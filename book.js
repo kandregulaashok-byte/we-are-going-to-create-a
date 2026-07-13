@@ -55,7 +55,12 @@ let paymentFilePickerOpen = false;
 let checkoutListenersWired = false;
 
 function validPhone(value) {
-  return String(value || "").replace(/\D/g, "").length === 10;
+  return normalizePhone(value).length === 10;
+}
+
+function normalizePhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
 }
 
 // Helper Functions
@@ -579,7 +584,7 @@ async function handleCheckoutFormSubmit(event) {
   }
   
   const guestName = bookingName.value.trim();
-  const guestPhone = bookingPhone.value.trim();
+  const guestPhone = normalizePhone(bookingPhone.value);
   const guestEmail = bookingEmail.value.trim();
   const manualMode = paymentSettings.mode !== "razorpay" && paymentSettings.mode !== "mock";
   const screenshotFile = paymentScreenshotInput?.files?.[0] || null;
