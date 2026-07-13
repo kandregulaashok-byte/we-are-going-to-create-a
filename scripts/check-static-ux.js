@@ -15,6 +15,7 @@ const admin = read("admin.js");
 const owner = read("owner.js");
 const verifyPayment = read("api/verify-payment.js");
 const razorpayWebhook = read("api/razorpay-webhook.js");
+const emailApi = read("api/email.js");
 const releasePaymentHold = read("api/release-payment-hold.js");
 const paymentStatus = read("api/payment-status.js");
 const paymentSettings = read("api/payment-settings.js");
@@ -37,6 +38,18 @@ const visibleRuntime = app + book + admin + owner + read("admin-settings.js") + 
   "public/owner.js",
   "public/shared.js",
   "public/admin-settings.js"
+].forEach(file => execFileSync(process.execPath, ["--check", file], { stdio: "pipe" }));
+[
+  "api/create-payment-hold.js",
+  "api/email.js",
+  "api/verify-payment.js",
+  "api/razorpay-webhook.js",
+  "api/release-payment-hold.js",
+  "api/payment-status.js",
+  "api/payment-settings.js",
+  "api/manual-booking.js",
+  "api/log-client-error.js",
+  "api/whatsapp-webhook.js"
 ].forEach(file => execFileSync(process.execPath, ["--check", file], { stdio: "pipe" }));
 
 if ((index.match(/terms-of-service/g) || []).length !== 1) fail("Terms link should appear once on home/profile.");
@@ -89,6 +102,9 @@ if (!app.includes("function normalizePhone") || !app.includes("Please enter a va
 if (!app.includes('table: "booking_holds"') || !book.includes('table: "booking_holds"') || !admin.includes('table: "booking_holds"') || !owner.includes('table: "booking_holds"')) fail("All live pages must refresh availability when payment holds change.");
 if (!fs.existsSync("realtime-sync-migration.sql") || !read("realtime-sync-migration.sql").includes("supabase_realtime")) fail("Realtime table publication migration is missing.");
 if (!whatsappWebhook.includes("WHATSAPP_VERIFY_TOKEN") || !whatsappWebhook.includes('"hub.challenge"')) fail("WhatsApp webhook verification endpoint is missing.");
+if (!emailApi.includes("SMTP_PASS") || !emailApi.includes("sendBookingEmailsOnce")) fail("Booking email sender is missing.");
+if (!verifyPayment.includes("sendBookingEmailsOnce") || !razorpayWebhook.includes("sendBookingEmailsOnce")) fail("Confirmed bookings must email the customer and admin.");
+if (!fs.existsSync("booking-email-notifications-migration.sql") || !read("booking-email-notifications-migration.sql").includes("confirmation_email_sent_at")) fail("Booking email notification migration is missing.");
 if (!app.includes('.from("rooms_public").select("id,room_name,image_urls")') || app.includes("rooms(room_name,image_urls)")) fail("Customer bookings must load room display data from rooms_public, not private rooms.");
 if (!app.includes('booking.roomImage || "/brand-logo.png"')) fail("Customer booking cards need a real image fallback.");
 if (!manualBooking.includes('mode === "razorpay"') || !manualBooking.includes('p_screenshot_url')) fail("Manual booking API must reject Razorpay mode and require screenshot in manual mode.");

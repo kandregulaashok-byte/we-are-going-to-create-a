@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { sendBookingEmailsOnce } = require("./email");
 
 async function confirmHold(holdId, paymentId) {
   const url = process.env.SUPABASE_URL;
@@ -105,7 +106,11 @@ module.exports = async function handler(req, res) {
     if (hold.customer_email !== user.email) return res.status(403).json({ error: "Payment verification failed." });
     if (hold.razorpay_order_id !== razorpay_order_id) throw new Error("Payment order does not match this booking hold.");
     if (hold.status === "confirmed" && hold.razorpay_payment_id === razorpay_payment_id) {
-      return res.status(200).json({ booking_id: await bookingByPayment(razorpay_payment_id) || hold_id });
+      const existingBookingId = await bookingByPayment(razorpay_payment_id) || hold_id;
+      await sendBookingEmailsOnce({ bookingId: existingBookingId, hold, paymentId: razorpay_payment_id }).catch(error => {
+        console.error("Booking email failed:", error.message);
+      });
+      return res.status(200).json({ booking_id: existingBookingId });
     }
     if (!validSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
       const payment = await razorpayPayment(razorpay_payment_id);
@@ -118,6 +123,9 @@ module.exports = async function handler(req, res) {
       }
     }
     const bookingId = await confirmHold(hold_id, razorpay_payment_id);
+    await sendBookingEmailsOnce({ bookingId, hold, paymentId: razorpay_payment_id }).catch(error => {
+      console.error("Booking email failed:", error.message);
+    });
     res.status(200).json({ booking_id: bookingId });
   } catch (error) {
     console.error("Payment verification failed:", error.message, {

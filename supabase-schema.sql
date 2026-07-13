@@ -74,7 +74,8 @@ create table if not exists public.bookings (
   total_price integer not null default 0,
   status text not null default 'confirmed', -- 'confirmed', 'cancelled', 'offline_blocked'
   payment_option text,
-  payment_id text
+  payment_id text,
+  confirmation_email_sent_at timestamptz
 );
 
 -- Allow multi-room hotels to have overlapping bookings as long as summed rooms stay within capacity.

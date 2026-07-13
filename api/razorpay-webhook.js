@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { sendBookingEmailsOnce } = require("./email");
 
 async function supabaseFetch(path, options = {}) {
   const url = process.env.SUPABASE_URL;
@@ -53,7 +54,10 @@ module.exports = async function handler(req, res) {
     const holds = await supabaseFetch(`booking_holds?razorpay_order_id=eq.${payment.order_id}&select=*&limit=1`);
     const hold = holds?.[0];
     if (!hold || hold.status === "confirmed") return res.status(200).json({ ok: true });
-    await confirmHold(hold.id, payment.id);
+    const bookingId = await confirmHold(hold.id, payment.id);
+    await sendBookingEmailsOnce({ bookingId, hold, paymentId: payment.id }).catch(error => {
+      console.error("Booking email failed:", error.message);
+    });
     res.status(200).json({ ok: true });
   } catch (error) {
     console.error("Webhook failed:", error.message);
