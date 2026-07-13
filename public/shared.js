@@ -147,7 +147,21 @@ function reportClientError(message, source = "", line = 0) {
   })], { type: "application/json" }));
 }
 
+function showActionError(message = "") {
+  const text = friendlyBookingError(String(message || "Action failed. Please try again."));
+  if (typeof notifyAdmin === "function") return notifyAdmin(text, true);
+  if (typeof setStatus === "function") return setStatus(text, true);
+  alert(text);
+}
+
 if (typeof window !== "undefined") {
-  window.addEventListener("error", event => reportClientError(event.message, event.filename, event.lineno));
-  window.addEventListener("unhandledrejection", event => reportClientError(event.reason?.message || event.reason || "Unhandled promise rejection"));
+  window.addEventListener("error", event => {
+    reportClientError(event.message, event.filename, event.lineno);
+    if (event.target === window) showActionError(event.message);
+  });
+  window.addEventListener("unhandledrejection", event => {
+    const message = event.reason?.message || event.reason || "Action failed. Please try again.";
+    reportClientError(message);
+    showActionError(message);
+  });
 }

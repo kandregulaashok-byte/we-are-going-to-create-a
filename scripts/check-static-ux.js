@@ -65,6 +65,7 @@ if (/visualViewport\?\.(addEventListener|removeEventListener)[\s\S]{0,80}positio
 if (/window\.addEventListener\("scroll",\s*positionBottomNav/.test(app)) fail("Bottom nav must not be repositioned on page scroll.");
 if (!css.includes("--bottom-nav-space: 156px")) fail("Mobile bottom spacing must protect content from nav overlap.");
 if (!/supabase\|vercel\|github\|environment\|row-level security\|permission denied\|violates/.test(shared)) fail("Backend errors must be masked for customers.");
+if (!shared.includes("function showActionError") || !shared.includes("unhandledrejection") || !shared.includes("notifyAdmin")) fail("Unhandled button failures must show a friendly visible error.");
 if (!read("admin-ui.js").includes("cleanAdminMessage") || !read("admin-ui.js").includes("vercel|github|environment")) fail("Admin status must mask raw backend permission errors.");
 if (!owner.includes("ownerFriendlyError") || !owner.includes("vercel|github|environment")) fail("Owner status must mask raw backend permission errors.");
 if (/alert\([^)]*error\.message|innerHTML\s*=[^;]*error\.message/.test(admin + owner)) fail("Admin/owner UI must not show raw backend errors.");
