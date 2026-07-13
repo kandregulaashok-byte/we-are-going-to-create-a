@@ -12,7 +12,7 @@ function notifyAdmin(message, isError = false) {
 
 function cleanAdminMessage(message = "") {
   const text = String(message || "");
-  if (/supabase|row-level security|permission denied|violates|service role|schema cache|rpc|rest\/v1/i.test(text)) {
+  if (/supabase|vercel|github|environment|row-level security|permission denied|violates|service role|schema cache|rpc|rest\/v1/i.test(text)) {
     return "Action could not be completed. Please check permissions or try again.";
   }
   return text;

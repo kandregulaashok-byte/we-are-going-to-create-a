@@ -100,7 +100,7 @@ function formatDateWithDay(dateStr) {
 }
 
 function ownerFriendlyError(message = "") {
-  return /supabase|row-level security|permission denied|violates|schema cache|rpc|rest\/v1/i.test(String(message))
+  return /supabase|vercel|github|environment|row-level security|permission denied|violates|service role|schema cache|rpc|rest\/v1/i.test(String(message))
     ? "Operation failed. Please try again or contact support."
     : String(message || "Operation failed. Please try again or contact support.");
 }
