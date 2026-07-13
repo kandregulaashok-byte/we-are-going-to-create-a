@@ -34,6 +34,9 @@ if (!css.includes("--bottom-nav-space: 156px")) fail("Mobile bottom spacing must
 if (!/supabase\|row-level security\|permission denied\|violates/.test(shared)) fail("Backend errors must be masked for customers.");
 if (!read("admin-ui.js").includes("cleanAdminMessage") || !read("admin-ui.js").includes("permission denied")) fail("Admin status must mask raw backend permission errors.");
 if (/alert\([^)]*error\.message|innerHTML\s*=[^;]*error\.message/.test(admin + owner)) fail("Admin/owner UI must not show raw backend errors.");
+if (!admin.includes('.from("booking_occupancy")') || !admin.includes("allOccupancy")) fail("Admin availability must use shared occupancy, including live payment holds.");
+if (!owner.includes('.from("booking_occupancy")') || !owner.includes("allOccupancy")) fail("Owner availability must use shared occupancy, including live payment holds.");
+if (!owner.includes('table: "booking_holds"')) fail("Owner availability must refresh when payment holds change.");
 if (owner.includes("'Cancel Booking'") || !owner.includes("Customer bookings cannot be released")) fail("Owner panel must not allow releasing paid customer bookings.");
 if (!owner.includes('modalSubmitRelease.dataset.bookingId = ""') || !owner.includes("modalSubmitRelease.classList.add(\"hidden\")")) fail("Owner block modal must hide release action when creating a new block.");
 if (!book.includes('loading="lazy" decoding="async"')) fail("Booking room image should not block checkout rendering.");

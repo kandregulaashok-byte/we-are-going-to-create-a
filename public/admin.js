@@ -79,6 +79,7 @@ function addDays(date, days) {
 let ownerRooms = [];
 let hotelOwners = [];
 let allBookings = [];
+let allOccupancy = [];
 let upcomingBookings = [];
 let allCustomers = [];
 let editingRoomId = null;
@@ -158,7 +159,7 @@ function availableForBlock(room, from, to) {
   let maxBooked = 0;
   for (let day = new Date(from); day < new Date(to); day.setDate(day.getDate() + 1)) {
     const dayStr = day.toISOString().slice(0, 10);
-    const booked = allBookings
+    const booked = allOccupancy
       .filter(b => String(b.room_id) === String(room.id) && b.check_in <= dayStr && b.check_out > dayStr)
       .reduce((sum, b) => sum + Number(b.num_rooms || 1), 0);
     maxBooked = Math.max(maxBooked, booked);
@@ -292,6 +293,7 @@ async function blockRoomFromAdmin(roomId, checkIn, checkOut, rooms) {
   });
   if (error) return notifyAdmin(error.message, true);
   await loadSales();
+  await loadOccupancy();
   updateBlockHint();
   notifyAdmin("Room blocked for the selected dates.");
 }
@@ -489,6 +491,7 @@ window.addEventListener("DOMContentLoaded", () => {
         await loadOwners();
         await loadRooms();
         await loadSales();
+        await loadOccupancy();
       } else {
         showAuthScreen(true);
         ownerRooms = [];
@@ -504,6 +507,7 @@ window.addEventListener("DOMContentLoaded", () => {
     ownerRooms = [];
     hotelOwners = [];
     allBookings = [];
+    allOccupancy = [];
     renderRooms();
     renderOwners();
   }
@@ -515,7 +519,11 @@ function setupRealtime() {
     .channel("admin-realtime-sync")
     .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => {
       loadSales();
+      loadOccupancy();
       if (!contentUpcoming?.classList.contains("hidden")) loadUpcomingBookings();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "booking_holds" }, () => {
+      loadOccupancy();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => {
       loadRooms();
@@ -731,6 +739,19 @@ async function loadSales() {
   updateBlockHint();
 }
 
+async function loadOccupancy() {
+  if (!supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from("booking_occupancy")
+    .select("room_id,check_in,check_out,num_rooms,status");
+  if (error) {
+    console.error("Failed to load occupancy:", error.message);
+    return;
+  }
+  allOccupancy = data || [];
+  updateBlockHint();
+}
+
 async function loadCustomers() {
   if (!supabaseClient) return;
   if (!allBookings.length) await loadSales();
@@ -827,6 +848,7 @@ async function releaseBlockedRoom(id) {
   const { error } = await supabaseClient.from("bookings").update({ status: "cancelled" }).eq("id", id);
   if (error) return notifyAdmin(error.message, true);
   await loadSales();
+  await loadOccupancy();
   await loadUpcomingBookings();
   updateBlockHint();
   notifyAdmin("Blocked room released.");
@@ -841,6 +863,7 @@ adminSalesList?.addEventListener("click", async event => {
     });
   if (error) return notifyAdmin(error.message, true);
   await loadSales();
+  await loadOccupancy();
   await loadUpcomingBookings();
   updateBlockHint();
   notifyAdmin("Payment confirmed. Booking is now confirmed.");
@@ -855,6 +878,7 @@ adminSalesList?.addEventListener("click", async event => {
     });
     if (error) return notifyAdmin(error.message, true);
     await loadSales();
+    await loadOccupancy();
     await loadUpcomingBookings();
     updateBlockHint();
     notifyAdmin("Booking cancelled and room(s) released.");
@@ -941,6 +965,7 @@ async function updateUpcomingBooking(bookingId, status) {
   if (error) return notifyAdmin(error.message, true);
   await loadUpcomingBookings();
   await loadSales();
+  await loadOccupancy();
   updateBlockHint();
   notifyAdmin("Upcoming booking status updated.");
 }

@@ -71,6 +71,7 @@ const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.su
 let currentOwner = null;
 let ownerRooms = [];
 let allBookings = [];
+let allOccupancy = [];
 let activeTab = "current"; // "current", "future", "past"
 let isCustomBlockMode = false;
 
@@ -158,6 +159,7 @@ async function refreshBookings() {
   const roomIds = ownerRooms.map(r => r.id);
   if (roomIds.length === 0) {
     allBookings = [];
+    allOccupancy = [];
     calculateStats();
     renderCalendarGrid();
     renderBookings();
@@ -178,6 +180,19 @@ async function refreshBookings() {
   }
 
   allBookings = bookings || [];
+
+  const { data: occupancy, error: occupancyError } = await supabaseClient
+    .from("booking_occupancy")
+    .select("room_id,check_in,check_out,num_rooms,status")
+    .in("room_id", roomIds);
+
+  if (occupancyError) {
+    console.error(occupancyError.message);
+    allOccupancy = allBookings;
+  } else {
+    allOccupancy = occupancy || [];
+  }
+
   calculateStats();
   renderCalendarGrid();
   renderBookings();
@@ -265,13 +280,13 @@ function renderCalendarGrid() {
 
     dates.forEach(dateStr => {
       // Find overlapping bookings for this room on this date
-      const overlapping = allBookings.filter(b => 
-        b.room_id === room.id && 
+      const overlapping = allOccupancy.filter(b => 
+        String(b.room_id) === String(room.id) && 
         b.check_in <= dateStr && 
         b.check_out > dateStr
       );
 
-      const bookedCount = overlapping.reduce((sum, b) => sum + b.num_rooms, 0);
+      const bookedCount = overlapping.reduce((sum, b) => sum + Number(b.num_rooms || 1), 0);
       const remaining = Math.max(0, room.available_rooms - bookedCount);
       const isVacant = remaining > 0;
 
@@ -622,19 +637,11 @@ function setupSubmissions() {
       const room = ownerRooms.find(r => r.id === roomId);
       if (!room) return;
 
-      // Check double-booking issues for any of the dates
-      const { data: overlapping, error: availError } = await supabaseClient
-        .from("owner_bookings")
-        .select("room_id,check_in,check_out,num_rooms,status")
-        .eq("room_id", roomId)
-        .neq("status", "cancelled")
-        .lt("check_in", checkOutStr)
-        .gt("check_out", checkInStr);
-
-      if (availError) {
-        alert(ownerFriendlyError(availError.message));
-        return;
-      }
+      const overlapping = allOccupancy.filter(b =>
+        String(b.room_id) === String(roomId) &&
+        b.check_in < checkOutStr &&
+        b.check_out > checkInStr
+      );
 
       // Find max overlap count
       let maxBooked = 0;
@@ -649,7 +656,7 @@ function setupSubmissions() {
         const day = String(d.getDate()).padStart(2, '0');
         const dStr = `${year}-${month}-${day}`;
         const dayBookings = overlapping.filter(b => b.check_in <= dStr && b.check_out > dStr);
-        const dayBookedCount = dayBookings.reduce((sum, b) => sum + b.num_rooms, 0);
+        const dayBookedCount = dayBookings.reduce((sum, b) => sum + Number(b.num_rooms || 1), 0);
         if (dayBookedCount > maxBooked) {
           maxBooked = dayBookedCount;
         }
@@ -901,6 +908,9 @@ function setupRealtime() {
   supabaseClient
     .channel("owner-realtime-sync")
     .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => {
+      refreshBookings();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "booking_holds" }, () => {
       refreshBookings();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => {
