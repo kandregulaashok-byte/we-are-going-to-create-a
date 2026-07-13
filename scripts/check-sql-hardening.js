@@ -5,6 +5,7 @@ const files = [
   "security-hardening-booking-rpc-migration.sql",
   "storage-rls-hardening-migration.sql",
   "payment-confirm-expired-hold-migration.sql",
+  "owner-release-offline-only-migration.sql",
   "supabase-schema.sql"
 ].map(file => fs.readFileSync(file, "utf8").toLowerCase()).join("\n");
 
@@ -16,7 +17,8 @@ const required = [
   "public.is_admin()",
   "revoke select on public.bookings from anon",
   "v_hold.status not in ('held', 'expired')",
-  "where payment_id = p_razorpay_payment_id"
+  "where payment_id = p_razorpay_payment_id",
+  "status = 'offline_blocked'"
 ];
 
 for (const text of required) {

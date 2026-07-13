@@ -337,6 +337,8 @@ create policy "bookings owner update"
 on public.bookings for update
 to authenticated
 using (
+  status = 'offline_blocked'
+  and
   exists (
     select 1 from public.rooms
     where rooms.id = bookings.room_id

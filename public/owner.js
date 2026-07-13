@@ -387,11 +387,9 @@ function renderBookings() {
           <p><strong>Your Share (Payout):</strong> Rs.${(booking.owner_amount || 0).toLocaleString("en-IN")}</p>
           ${isOffline ? '' : `<p><strong>Total Revenue:</strong> ${formatPrice(booking.total_price)}</p>`}
         </div>
-        <div class="booking-card-actions">
-          <button class="release-btn" data-cancel-id="${booking.id}">
-            ${isOffline ? 'Release Room' : 'Cancel Booking'}
-          </button>
-        </div>
+        ${isOffline ? `<div class="booking-card-actions">
+          <button class="release-btn" data-cancel-id="${booking.id}">Release Room</button>
+        </div>` : ""}
       </div>
     `;
   }).join("");
@@ -416,9 +414,11 @@ async function cancelOrReleaseBooking(bookingId) {
   if (!booking) return;
   
   const isOffline = booking.status === "offline_blocked";
-  const promptMsg = isOffline 
-    ? "Are you sure you want to release this offline room blockage?" 
-    : "Are you sure you want to cancel this guest booking?";
+  if (!isOffline) {
+    alert("Customer bookings cannot be released from the owner panel. Please contact Stay@Maredumilli support.");
+    return;
+  }
+  const promptMsg = "Are you sure you want to release this offline room blockage?";
 
   if (!confirm(promptMsg)) return;
 
@@ -428,9 +428,9 @@ async function cancelOrReleaseBooking(bookingId) {
     .eq("id", bookingId);
 
   if (error) {
-    alert("Operation failed: " + error.message);
+    alert("Operation failed. Please try again or contact support.");
   } else {
-    alert(isOffline ? "Room blockage released!" : "Booking cancelled!");
+    alert("Room blockage released!");
     await refreshBookings();
   }
 }
@@ -484,19 +484,26 @@ function openQuickModal(roomId, dateStr, remaining) {
       if (modalBookingPhone) modalBookingPhone.textContent = isOffline ? "Owner-created block" : "Hidden for customer privacy";
       if (modalBookingDates) modalBookingDates.textContent = `${formatDate(booking.check_in)} to ${formatDate(booking.check_out)}`;
       if (modalBookingRooms) modalBookingRooms.textContent = `${booking.num_rooms} Room(s)`;
-      if (modalSubmitRelease) modalSubmitRelease.dataset.bookingId = booking.id;
+      if (modalSubmitRelease) {
+        modalSubmitRelease.dataset.bookingId = isOffline ? booking.id : "";
+        modalSubmitRelease.classList.toggle("hidden", !isOffline);
+      }
     } else {
       if (modalBookingStatus) modalBookingStatus.textContent = "Fully Booked";
       if (modalBookingGuest) modalBookingGuest.textContent = "Unknown Guest";
       if (modalBookingPhone) modalBookingPhone.textContent = "-";
       if (modalBookingDates) modalBookingDates.textContent = dateStr;
       if (modalBookingRooms) modalBookingRooms.textContent = `${room.available_rooms} Room(s)`;
-      if (modalSubmitRelease) modalSubmitRelease.dataset.bookingId = "";
+      if (modalSubmitRelease) {
+        modalSubmitRelease.dataset.bookingId = "";
+        modalSubmitRelease.classList.add("hidden");
+      }
     }
   } else {
     if (modalTitle) modalTitle.textContent = "Block Room Offline";
     if (modalBlockSection) modalBlockSection.classList.remove("hidden");
     if (modalReleaseSection) modalReleaseSection.classList.add("hidden");
+    if (modalSubmitRelease) modalSubmitRelease.classList.remove("hidden");
 
     if (modalGuestName) modalGuestName.value = "";
     if (modalGuestPhone) modalGuestPhone.value = "";
