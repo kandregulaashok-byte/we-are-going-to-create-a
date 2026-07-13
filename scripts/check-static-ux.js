@@ -38,6 +38,7 @@ if (owner.includes("'Cancel Booking'") || !owner.includes("Customer bookings can
 if (!book.includes('loading="lazy" decoding="async"')) fail("Booking room image should not block checkout rendering.");
 if (book.includes("adultsInput.value = fitted.adults")) fail("Adult input must not be rewritten while typing.");
 if (!book.includes('e.target.id === "adultsInput" && e.type === "change"')) fail("Adult room auto-fit should run on commit, not every keystroke.");
+if (!book.includes("const tripError = validateTripValues(formDetails)")) fail("Checkout must validate trip fields before payment.");
 if (!book.includes('localStorage.setItem("stayProfile"')) fail("Booking contact details should persist to profile.");
 if (/9999999999|customer@stay\.com/.test(book)) fail("Paid checkout must not use fake customer contact fallbacks.");
 if (book.includes("bookingEmail.value = localSavedDetails.email")) fail("Checkout email must come from the logged-in session, not stale saved details.");
@@ -49,6 +50,7 @@ if (/service role key|Check Supabase/i.test(paymentSettings)) fail("Payment sett
 if (paymentSettings.includes('? body.mode : "manual"')) fail("Payment settings must default to Razorpay.");
 if (!app.includes("function normalizePhone") || !app.includes("Please enter a valid 10 digit mobile number.")) fail("Profile phone save must normalize and validate Indian mobile numbers.");
 if (!app.includes('.from("rooms_public").select("id,room_name,image_urls")') || app.includes("rooms(room_name,image_urls)")) fail("Customer bookings must load room display data from rooms_public, not private rooms.");
+if (!app.includes('booking.roomImage || "/brand-logo.png"')) fail("Customer booking cards need a real image fallback.");
 if (!manualBooking.includes('mode === "razorpay"') || !manualBooking.includes('p_screenshot_url')) fail("Manual booking API must reject Razorpay mode and require screenshot in manual mode.");
 if (!/if\s*\(\s*body\.p_attach_booking_id[\s\S]{0,120}mode === "razorpay"/.test(manualBooking)) fail("Manual screenshot attach must reject Razorpay mode before updating bookings.");
 if (manualBooking.includes('p_status: "confirmed"')) fail("Manual booking API must not silently create confirmed bookings.");

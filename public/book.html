@@ -58,9 +58,9 @@
         <div class="panel" style="margin-bottom: 20px; padding: 20px; border-radius: 8px;">
           <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 18px;">Stay Details</h3>
           <div class="form-grid booking-detail-grid" style="display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
-            <label>Adults <input id="adultsInput" type="number" min="1" value="2" required></label>
-            <label>Children <input id="childrenInput" type="number" min="0" value="0" required></label>
-            <label>Rooms <input id="roomsInput" type="number" min="1" value="1" required></label>
+            <label>Adults <input id="adultsInput" type="number" min="1" step="1" inputmode="numeric" value="2" required></label>
+            <label>Children <input id="childrenInput" type="number" min="0" step="1" inputmode="numeric" value="0" required></label>
+            <label>Rooms <input id="roomsInput" type="number" min="1" step="1" inputmode="numeric" value="1" required></label>
             <label>From <input id="fromInput" type="date" required></label>
             <label>To <input id="toInput" type="date" required></label>
           </div>

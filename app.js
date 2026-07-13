@@ -575,7 +575,7 @@ function renderBookings() {
       ${(() => {
         const room = rooms.find(item => item.id === booking.roomId);
         const roomName = room?.name || booking.roomName || "Stay booking";
-        const roomImage = room?.images?.[0] || booking.roomImage || "";
+        const roomImage = room?.images?.[0] || booking.roomImage || "/brand-logo.png";
         return `<img src="${escapeHtml(safeUrl(roomImage))}" alt="${escapeHtml(roomName)}">`;
       })()}
       <div>

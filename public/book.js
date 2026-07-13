@@ -604,6 +604,11 @@ async function handleCheckoutFormSubmit(event) {
   }
   
   const formDetails = checkoutDetailsFromForm();
+  const tripError = validateTripValues(formDetails);
+  if (tripError) {
+    alert(tripError);
+    return;
+  }
   const fitted = fitDetailsToAvailability(room, formDetails);
   const pricing = priceForDates(room, fitted);
   
