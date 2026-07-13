@@ -15,6 +15,12 @@ function positiveWholeNumber(value) {
   return /^\d+$/.test(String(value).trim());
 }
 
+function validDateString(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 function defaultTripDetails() {
   const today = getLocalDateString();
   return {
@@ -28,6 +34,7 @@ function defaultTripDetails() {
 
 function validateTripValues({ from, to, adults, children, rooms }) {
   if (!from || !to) return "Please select check-in and check-out dates.";
+  if (!validDateString(from) || !validDateString(to)) return "Please select valid check-in and check-out dates.";
   if (to <= from) return "Check-out date must be after check-in date.";
   if (!positiveWholeNumber(adults) || Number(adults) < 1) return "Adults must be a whole number of at least 1.";
   if (!positiveWholeNumber(children) || Number(children) < 0) return "Kids must be a whole number of 0 or more.";
