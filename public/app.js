@@ -94,6 +94,14 @@ function openPendingBookingIfReady() {
   return true;
 }
 
+function hotelSlug(room) {
+  return String(room?.name || "hotel")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "hotel";
+}
+
 function closeOpenDialogs() {
   document.querySelectorAll("dialog[open]").forEach(dialog => dialog.close());
 }
@@ -347,7 +355,10 @@ function roomCard(room, cardIndex = 0) {
         <div class="room-title">
           <div>
             <p class="room-type">${escapeHtml(room.type)}</p>
-            <button class="hotel-link" data-action="${remainingRooms > 0 ? "book" : "waitlist"}" data-room="${escapeHtml(room.id)}" type="button">${escapeHtml(room.name)}</button>
+            <div class="hotel-title-row">
+              <a class="hotel-link" href="/hotels/${escapeHtml(hotelSlug(room))}">${escapeHtml(room.name)}</a>
+              <button class="icon-btn hotel-share" data-action="shareHotel" data-room="${escapeHtml(room.id)}" type="button" aria-label="Share ${escapeHtml(room.name)}"><i data-lucide="send"></i></button>
+            </div>
           </div>
           ${amenityIcons(room)}
         </div>
@@ -1054,6 +1065,16 @@ document.addEventListener("click", event => {
     return;
   }
   if (button.dataset.action === "waitlist") captureWaitlist(room);
+  if (button.dataset.action === "shareHotel") {
+    const url = `${location.origin}/hotels/${hotelSlug(room)}`;
+    if (navigator.share) {
+      navigator.share({ title: `${room.name} - Stay@Maredumilli`, text: `Check this stay: ${room.name}`, url }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(url);
+      alert("Hotel link copied.");
+    }
+    return;
+  }
   if (button.dataset.action === "editDetails") {
     window.location.hash = "#home";
   }
