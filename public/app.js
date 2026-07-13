@@ -675,6 +675,8 @@ function validPhone(value) {
 
 async function createMockBooking(room, details, pricing, status = "confirmed", screenshotUrl = "") {
   if (!supabaseClient) return Date.now();
+  if (!String(details.name || profile.name || "").trim()) throw new Error("Please enter your full name.");
+  if (!String(details.email || profile.email || "").trim()) throw new Error("Please login again before booking.");
   const { data: sessionData } = await supabaseClient.auth.getSession();
   const { response, data: result } = await fetchJsonWithTimeout("/api/manual-booking", {
     method: "POST",
@@ -684,7 +686,7 @@ async function createMockBooking(room, details, pricing, status = "confirmed", s
     },
     body: JSON.stringify({
       p_room_id: room.id,
-      p_customer_name: details.name || profile.name || "Customer",
+      p_customer_name: details.name || profile.name,
       p_customer_phone: details.phone || profile.phone,
       p_customer_email: details.email || profile.email,
       p_check_in: details.from,

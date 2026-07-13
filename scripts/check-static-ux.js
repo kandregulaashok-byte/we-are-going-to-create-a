@@ -68,6 +68,7 @@ if (!book.includes('localStorage.setItem("stayProfile"')) fail("Booking contact 
 if (!book.includes('let profile = getStore("stayProfile", {})')) fail("Checkout must start from the saved customer profile.");
 if (!book.includes("bookingName.value = profile.name || localSavedDetails.name")) fail("Checkout must prefer saved profile contact details over stale trip details.");
 if (/9999999999|customer@stay\.com/.test(book)) fail("Paid checkout must not use fake customer contact fallbacks.");
+if (/(p_customer_name|customer_name):\s*[^,\n]*\|\|\s*["']Customer["']/.test(app + book)) fail("Bookings must not invent a fake customer name.");
 if (book.includes("bookingEmail.value = localSavedDetails.email")) fail("Checkout email must come from the logged-in session, not stale saved details.");
 if (!book.includes("checkoutListenersWired")) fail("Checkout listeners must only be wired once.");
 if (!book.includes("normalizePhone") || !book.includes('digits.startsWith("91")')) fail("Checkout must accept +91 Indian mobile numbers.");

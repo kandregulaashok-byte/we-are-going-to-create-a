@@ -422,6 +422,8 @@ async function waitForPaymentConfirmation(holdId, paymentId) {
 
 async function createMockBooking(roomObj, details, pricing, status = "confirmed", screenshotUrl = "") {
   if (!supabaseClient) return Date.now();
+  if (!String(details.name || profile.name || "").trim()) throw new Error("Please enter your full name.");
+  if (!String(details.email || profile.email || "").trim()) throw new Error("Please login again before booking.");
   const { data: sessionData } = await supabaseClient.auth.getSession();
   const { response, data: result } = await fetchJsonWithTimeout("/api/manual-booking", {
     method: "POST",
@@ -431,7 +433,7 @@ async function createMockBooking(roomObj, details, pricing, status = "confirmed"
     },
     body: JSON.stringify({
       p_room_id: roomObj.id,
-      p_customer_name: details.name || profile.name || "Customer",
+      p_customer_name: details.name || profile.name,
       p_customer_phone: details.phone || profile.phone,
       p_customer_email: details.email || profile.email,
       p_check_in: details.from,
