@@ -38,7 +38,7 @@ const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && window.su
   ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
       auth: {
         storageKey: "stay-customer-auth",
-        flowType: "implicit",
+        flowType: "pkce",
         detectSessionInUrl: true,
         persistSession: true,
         autoRefreshToken: true
