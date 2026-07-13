@@ -85,9 +85,10 @@ function capturePendingBookingParam() {
 
 function openPendingBookingIfReady() {
   const roomId = pendingBookingId();
-  if (!roomId || !rooms.some(room => room.id === roomId)) return false;
+  const room = rooms.find(room => room.id === roomId);
+  if (!roomId || !room) return false;
   localStorage.removeItem("stayPendingRoomId");
-  const details = normalizeTripDetails(bookingDetails || {}, 1);
+  const details = fitDetailsToAvailability(room, bookingDetails || {});
   location.href = `/book.html?room=${roomId}&from=${details.from}&to=${details.to}&adults=${details.adults}&children=${details.children}&rooms=${details.rooms}`;
   return true;
 }
@@ -384,11 +385,13 @@ function fitDetailsToAvailability(room, details = null) {
   const maxAdults = maxRooms * Math.max(1, Number(room.maxAdults || 1));
   const requestedAdults = Number(fitted.adults || 1);
   const adults = maxAdults ? Math.min(requestedAdults, maxAdults) : requestedAdults;
+  const minRooms = minRoomsForAdults(room.maxAdults || 1, requestedAdults);
   return {
     ...fitted,
     requestedAdults,
     adults,
-    rooms: maxRooms ? Math.min(Number(fitted.rooms || 1), maxRooms) : Number(fitted.rooms || 1),
+    minRooms,
+    rooms: maxRooms ? clampRoomsForAdults(room.maxAdults || 1, requestedAdults, fitted.rooms, maxRooms) : 0,
     maxRooms,
     maxAdults,
     partialFit: requestedAdults > maxAdults
@@ -1044,12 +1047,8 @@ document.addEventListener("click", event => {
     expandedAmenities = expandedAmenities.includes(room.id) ? expandedAmenities.filter(id => id !== room.id) : [...expandedAmenities, room.id];
   }
   if (button.dataset.action === "book") {
-    const from = bookingDetails?.from || "";
-    const to = bookingDetails?.to || "";
-    const adults = bookingDetails?.adults || 2;
-    const children = bookingDetails?.children || 0;
-    const roomsCount = bookingDetails?.rooms || 1;
-    window.location.href = `/book.html?room=${room.id}&from=${from}&to=${to}&adults=${adults}&children=${children}&rooms=${roomsCount}`;
+    const details = fitDetailsToAvailability(room, bookingDetails || {});
+    window.location.href = `/book.html?room=${room.id}&from=${details.from}&to=${details.to}&adults=${details.adults}&children=${details.children}&rooms=${details.rooms}`;
     return;
   }
   if (button.dataset.action === "waitlist") captureWaitlist(room);

@@ -12,4 +12,6 @@ console.assert(/Adults/.test(context.validateTripValues({ from: "2026-07-12", to
 console.assert(/Rooms/.test(context.validateTripValues({ from: "2026-07-12", to: "2026-07-13", adults: 2, children: 0, rooms: "1.5" })), "rooms must be whole");
 console.assert(context.minRoomsForAdults(3, 8) === 3, "8 adults at max 3 per room should need 3 rooms");
 console.assert(context.normalizeTripDetails({ adults: 8, rooms: 1 }, 3).rooms === 3, "trip details should auto-fit rooms");
+console.assert(context.clampRoomsForAdults(3, 8, 1, 4) === 3, "rooms should clamp up to minimum needed");
+console.assert(context.clampRoomsForAdults(3, 8, 9, 4) === 4, "rooms should clamp down to available rooms");
 console.log("shared trip check passed");

@@ -89,11 +89,13 @@ function fitDetailsToAvailability(roomObj, details = null) {
   const maxAdults = maxRooms * Math.max(1, Number(roomObj.maxAdults || 1));
   const requestedAdults = Number(fitted.adults || 1);
   const adults = maxAdults ? Math.min(requestedAdults, maxAdults) : requestedAdults;
+  const minRooms = minRoomsNeededForAdults(roomObj, requestedAdults);
   return {
     ...fitted,
     requestedAdults,
     adults,
-    rooms: maxRooms ? Math.min(Number(fitted.rooms || 1), maxRooms) : Number(fitted.rooms || 1),
+    minRooms,
+    rooms: maxRooms ? clampRoomsForAdults(roomObj.maxAdults || 1, requestedAdults, fitted.rooms, maxRooms) : 0,
     maxRooms,
     maxAdults,
     partialFit: requestedAdults > maxAdults
@@ -501,8 +503,9 @@ function updatePricingUI() {
   const formDetails = checkoutDetailsFromForm();
   const fitted = fitDetailsToAvailability(room, formDetails);
   
-  if (document.activeElement !== roomsInput) roomsInput.value = fitted.rooms || 1;
+  roomsInput.min = fitted.maxRooms ? Math.min(fitted.minRooms, fitted.maxRooms) : 1;
   roomsInput.max = fitted.maxRooms || "";
+  if (document.activeElement !== roomsInput) roomsInput.value = fitted.rooms || 1;
   submitBtn.disabled = !fitted.maxRooms;
   
   const pricing = priceForDates(room, fitted);
@@ -856,6 +859,9 @@ async function handleUserSession(session) {
               to: toInput.value
             });
             roomsInput.value = Math.min(minRoomsNeededForAdults(room, Number(e.target.value || 1)), rem || 1);
+          }
+          if (e.target.id === "roomsInput" && e.type === "change") {
+            roomsInput.value = fitDetailsToAvailability(room, checkoutDetailsFromForm()).rooms || 1;
           }
           if (e.target.id === "fromInput") {
             const nextDate = getNextDateString(e.target.value);

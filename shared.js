@@ -46,13 +46,20 @@ function minRoomsForAdults(maxAdultsPerRoom, adults = 1) {
   return Math.max(1, Math.ceil(Number(adults || 1) / Math.max(1, Number(maxAdultsPerRoom || 1))));
 }
 
+function clampRoomsForAdults(maxAdultsPerRoom, adults = 1, rooms = 1, maxRooms = Infinity) {
+  const minRooms = minRoomsForAdults(maxAdultsPerRoom, adults);
+  const requestedRooms = Math.max(1, Number(rooms || 1));
+  const upperRooms = Number.isFinite(Number(maxRooms)) ? Math.max(0, Number(maxRooms)) : Infinity;
+  return Math.min(Math.max(requestedRooms, minRooms), upperRooms);
+}
+
 function normalizeTripDetails(details = {}, maxAdultsPerRoom = 1) {
   const base = { ...defaultTripDetails(), ...(details || {}) };
   return {
     ...base,
     adults: Number(base.adults || 1),
     children: Number(base.children || 0),
-    rooms: Math.max(Number(base.rooms || 1), minRoomsForAdults(maxAdultsPerRoom, base.adults))
+    rooms: clampRoomsForAdults(maxAdultsPerRoom, base.adults, base.rooms)
   };
 }
 
