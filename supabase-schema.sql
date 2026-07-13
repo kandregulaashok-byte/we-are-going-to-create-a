@@ -506,6 +506,9 @@ begin
   if p_num_rooms < 1 then
     raise exception 'Select at least one room.';
   end if;
+  if p_num_adults < 1 or p_num_kids < 0 then
+    raise exception 'Enter a valid guest count.';
+  end if;
   if p_status not in ('confirmed', 'offline_blocked', 'pending_payment') then
     raise exception 'Invalid booking status.';
   end if;
@@ -643,6 +646,7 @@ declare
 begin
   if p_check_out <= p_check_in then raise exception 'Check-out must be after check-in.'; end if;
   if p_num_rooms < 1 then raise exception 'Select at least one room.'; end if;
+  if p_num_adults < 1 or p_num_kids < 0 then raise exception 'Enter a valid guest count.'; end if;
 
   select * into v_room
   from public.rooms
