@@ -24,8 +24,12 @@ const pages = [
   "/faq.html"
 ];
 const viewports = [
+  ["small-phone", 320, 568],
+  ["android-small", 360, 740],
   ["desktop", 1440, 900],
+  ["laptop", 1366, 768],
   ["wide", 1920, 1080],
+  ["ipad-landscape", 1024, 768],
   ["tablet", 820, 1180],
   ["iphone-se", 375, 667],
   ["iphone-pro", 430, 932],

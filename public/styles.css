@@ -1292,7 +1292,12 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
     gap: 12px;
   }
   .hotel-detail-nav {
+    flex-wrap: wrap;
     margin-bottom: 10px;
+  }
+  .hotel-detail-nav .ghost-btn {
+    min-height: 36px;
+    padding: 8px 10px;
   }
   .hotel-detail-carousel {
     aspect-ratio: 1 / 1;
@@ -1306,7 +1311,15 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
     padding: 24px 20px !important;
   }
   .login-title h2 {
-    font-size: 23px;
+    font-size: clamp(19px, 7vw, 23px);
+  }
+  .login-title {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .login-title .brand-logo {
+    width: 40px;
+    height: 40px;
   }
   .login-fields .form-group > div {
     flex-wrap: wrap;
