@@ -1301,6 +1301,16 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
   .hotel-detail-carousel .slide-btn {
     display: flex;
   }
+  .login-card {
+    width: calc(100vw - 24px) !important;
+    padding: 24px 20px !important;
+  }
+  .login-title h2 {
+    font-size: 23px;
+  }
+  .login-fields .form-group > div {
+    flex-wrap: wrap;
+  }
   .hotel-stat-grid {
     grid-template-columns: 1fr;
   }
