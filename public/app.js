@@ -1127,7 +1127,7 @@ async function uploadRoomImages(files) {
     const path = `rooms/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, "-")}`;
     const { error } = await supabaseClient.storage
       .from(supabaseConfig.roomBucket || "room-images")
-      .upload(path, file, { upsert: true });
+      .upload(path, file, { upsert: true, cacheControl: "31536000" });
     if (error) throw error;
     const { data } = supabaseClient.storage
       .from(supabaseConfig.roomBucket || "room-images")

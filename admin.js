@@ -341,7 +341,7 @@ async function uploadRoomImage(file) {
   const path = `rooms/${Date.now()}-${safeName}`;
   const { error } = await supabaseClient.storage
     .from(supabaseConfig.roomBucket || "room-images")
-    .upload(path, file, { upsert: true });
+    .upload(path, file, { upsert: true, cacheControl: "31536000" });
   if (error) throw error;
   const { data } = supabaseClient.storage
     .from(supabaseConfig.roomBucket || "room-images")
@@ -1180,7 +1180,7 @@ async function uploadHighlightImage(file) {
   const path = `highlights/${Date.now()}-${safeName}`;
   const { error } = await supabaseClient.storage
     .from(supabaseConfig.roomBucket || "room-images")
-    .upload(path, file, { upsert: true });
+    .upload(path, file, { upsert: true, cacheControl: "31536000" });
   if (error) throw error;
   const { data } = supabaseClient.storage
     .from(supabaseConfig.roomBucket || "room-images")

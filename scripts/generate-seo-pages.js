@@ -59,6 +59,18 @@ function image(room) {
   return room.image_urls?.[0] || "";
 }
 
+function displayImage(src, width = 1200, height = 900, quality = 75, resize = "cover") {
+  if (!src) return src;
+  const marker = "/storage/v1/object/public/";
+  if (!src.includes(marker)) return src;
+  try {
+    const url = new URL(src);
+    return `${url.origin}/storage/v1/render/image/public/${src.split(marker)[1]}?width=${width}&height=${height}&resize=${resize}&quality=${quality}`;
+  } catch {
+    return "";
+  }
+}
+
 async function fetchRooms() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
@@ -99,8 +111,9 @@ function pageShell({ title, desc, canonical, ogImage, body, jsonLd, noindex = fa
 
 function hotelCard(room) {
   const url = `/hotels/${room.slug}`;
+  const imgUrl = displayImage(image(room), 600, 450, 75, "cover");
   return `<article class="seo-card">
-    ${image(room) ? `<a href="${url}"><img src="${escapeHtml(image(room))}" alt="${escapeHtml(room.room_name)}"></a>` : ""}
+    ${image(room) ? `<a href="${url}"><img src="${escapeHtml(imgUrl)}" data-original="${escapeHtml(image(room))}" onerror="this.onerror=null;this.src=this.dataset.original" alt="${escapeHtml(room.room_name)}"></a>` : ""}
     <div>
       <p class="eyebrow">${escapeHtml(room.room_type || "Stay")}</p>
       <h2><a href="${url}">${escapeHtml(room.room_name)}</a></h2>
@@ -146,7 +159,10 @@ function writeHotel(room) {
     <section class="hotel-detail-hero">
       <div class="hotel-detail-carousel">
         <div class="hotel-detail-slides">
-          ${images.map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(room.room_name)} image ${index + 1}" decoding="async" ${index ? 'loading="lazy"' : 'fetchpriority="high"'}>`).join("")}
+          ${images.map((src, index) => {
+            const imgUrl = displayImage(src, 1200, 900, 75, "cover");
+            return `<img src="${escapeHtml(imgUrl)}" data-original="${escapeHtml(src)}" onerror="this.onerror=null;this.src=this.dataset.original" alt="${escapeHtml(room.room_name)} image ${index + 1}" decoding="async" ${index ? 'loading="lazy"' : 'fetchpriority="high"'}>`;
+          }).join("")}
         </div>
         <button class="heart image-heart hotel-like" type="button" aria-label="Like ${escapeHtml(room.room_name)}">&#9825; <span>0</span></button>
         ${images.length > 1 ? `<button class="slide-btn prev hotel-prev" type="button" aria-label="Previous image">&lt;</button><button class="slide-btn next hotel-next" type="button" aria-label="Next image">&gt;</button><div class="dots">${images.map((_, i) => `<span class="${i === 0 ? "active" : ""}"></span>`).join("")}</div>` : ""}
