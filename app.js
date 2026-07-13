@@ -256,8 +256,8 @@ function render() {
 
 function renderAdminStatus() {
   adminStatus.innerHTML = supabaseClient
-    ? `<span>Backend connected. Rooms and images save online.</span>`
-    : `<span>Backend not connected. Using this browser only.</span>`;
+    ? `<span>Connected. Rooms and images save online.</span>`
+    : `<span>Connection is not ready. Using this browser only.</span>`;
 }
 
 function renderHighlights() {

@@ -21,6 +21,7 @@ const manualBooking = read("api/manual-booking.js");
 const logClientError = read("api/log-client-error.js");
 const seo = read("scripts/generate-seo-pages.js");
 const vercel = read("vercel.json");
+const visibleRuntime = app + book + admin + owner + read("admin-settings.js") + read("login.html");
 
 if ((index.match(/terms-of-service/g) || []).length !== 1) fail("Terms link should appear once on home/profile.");
 if ((index.match(/cancellation-policy/g) || []).length !== 1) fail("Cancellation link should appear once on home/profile.");
@@ -34,6 +35,8 @@ if (!css.includes("--bottom-nav-space: 156px")) fail("Mobile bottom spacing must
 if (!/supabase\|row-level security\|permission denied\|violates/.test(shared)) fail("Backend errors must be masked for customers.");
 if (!read("admin-ui.js").includes("cleanAdminMessage") || !read("admin-ui.js").includes("permission denied")) fail("Admin status must mask raw backend permission errors.");
 if (/alert\([^)]*error\.message|innerHTML\s*=[^;]*error\.message/.test(admin + owner)) fail("Admin/owner UI must not show raw backend errors.");
+if (/Backend (connected|not connected|is not connected)/.test(visibleRuntime)) fail("Runtime UI must not mention backend infrastructure.");
+if (/notifyAdmin\(`[^`]*\$\{error\.message\}/.test(read("admin-settings.js"))) fail("Admin settings must not show raw backend errors.");
 if (!admin.includes('.from("booking_occupancy")') || !admin.includes("allOccupancy")) fail("Admin availability must use shared occupancy, including live payment holds.");
 if (!owner.includes('.from("booking_occupancy")') || !owner.includes("allOccupancy")) fail("Owner availability must use shared occupancy, including live payment holds.");
 if (!owner.includes('table: "booking_holds"')) fail("Owner availability must refresh when payment holds change.");

@@ -38,7 +38,7 @@ async function loadPricingSettings() {
     .eq("key", "dynamic_pricing")
     .maybeSingle();
   if (error) {
-    setStatus(`Dynamic pricing table not ready: ${error.message}`);
+    notifyAdmin("Dynamic pricing settings are not available right now.", true);
     return;
   }
   const settings = normalizePricingSettings(data?.value);
@@ -67,13 +67,13 @@ async function savePricingSettings(event) {
   const { error } = await supabaseClient
     .from("site_settings")
     .upsert({ key: "dynamic_pricing", value: settings, updated_at: new Date().toISOString() });
-  if (error) return notifyAdmin(`Pricing save failed: ${error.message}`, true);
+  if (error) return notifyAdmin("Dynamic pricing settings could not be saved.", true);
   notifyAdmin("Dynamic pricing settings saved.");
 }
 
 async function savePaymentSettings(event) {
   event.preventDefault();
-  if (!supabaseClient) return notifyAdmin("Backend is not connected. Payment mode was not saved.", true);
+  if (!supabaseClient) return notifyAdmin("Connection is not ready. Payment mode was not saved.", true);
   const value = { mode: paymentMode.value, upiId: paymentUpiId?.value?.trim() || "" };
   if (value.mode === "manual" && !value.upiId) return notifyAdmin("Enter UPI ID before saving manual payment mode.", true);
   const button = adminPaymentForm.querySelector("button[type='submit']");
@@ -104,7 +104,7 @@ async function savePaymentSettings(event) {
     notifyAdmin(`Payment settings saved. Mode: ${value.mode}${value.upiId ? `, UPI: ${value.upiId}` : ""}.`);
   } catch (error) {
     resetButton();
-    notifyAdmin(`Payment mode save failed: ${error.message}`, true);
+    notifyAdmin("Payment mode could not be saved. Please try again.", true);
   } finally {
     resetButton();
   }

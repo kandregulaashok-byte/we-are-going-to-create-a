@@ -107,7 +107,7 @@ function closeRoomForm() {
 
 async function loadRooms() {
   if (!supabaseClient) {
-    setStatus("Backend not connected.");
+    setStatus("Connection is not ready.");
     ownerRooms = [];
     renderRooms();
     return;
@@ -122,7 +122,7 @@ async function loadRooms() {
     return;
   }
   ownerRooms = data || [];
-  setStatus("Backend connected. Rooms and images save online.");
+  setStatus("Connected. Rooms and images save online.");
   renderRooms();
 }
 
@@ -195,7 +195,7 @@ function renderAdminBlocks() {
 
 adminRoomForm.addEventListener("submit", async event => {
   event.preventDefault();
-  if (!supabaseClient) return showError("Backend not connected.");
+  if (!supabaseClient) return showError("Connection is not ready.");
   setSaving(true);
   setStatus("Saving room and uploading images...");
   let imageUrls = [];
@@ -503,7 +503,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   } else {
     showAuthScreen(false);
-    setStatus("Backend not connected.");
+    setStatus("Connection is not ready.");
     ownerRooms = [];
     hotelOwners = [];
     allBookings = [];
