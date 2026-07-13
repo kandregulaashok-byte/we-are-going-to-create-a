@@ -107,5 +107,7 @@ if (!vercel.includes('"X-Frame-Options"') || !vercel.includes('"DENY"')) fail("C
 for (const route of ["/terms-of-service", "/cancellation-policy", "/check-in-policy", "/privacy-policy", "/faq"]) {
   if (!vercel.includes(`"source": "${route}"`)) fail(`${route} must route to a real public page.`);
 }
+if (read("sitemap.xml").includes("privacy.html") || read("sitemap.xml").includes("faq.html")) fail("Sitemap must use clean privacy/FAQ URLs.");
+if (read("privacy.html").includes("privacy.html") || read("faq.html").includes("faq.html")) fail("Privacy/FAQ canonical links must use clean URLs.");
 
 console.log("static ux/security check passed");
